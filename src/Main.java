@@ -16,8 +16,5 @@ public class Main {
     
     public static void main(String[] args) throws IOException {
         website.web(args); // starts website
-
-
-
     }
 }
