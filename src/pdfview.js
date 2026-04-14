@@ -1,5 +1,5 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const url = 'pdf.pdf';
+const defaultUrl = 'pdf.pdf';
 
 let pdfDoc = null,
     pageNum = 1,
@@ -8,7 +8,9 @@ let pdfDoc = null,
 
 const scale = 1.5,
     canvas = document.querySelector('#pdf-render'),
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d'),
+    fileInput = document.querySelector('#file-input'),
+    errorDiv = document.querySelector('#file-error');
 
 // Render the page
 const renderPage = num => {
@@ -67,23 +69,61 @@ const showNextPage = () => {
     queueRenderPage(pageNum);
 };
 
+const showError = message => {
+    errorDiv.textContent = message;
+    document.querySelector('.top-bar').style.display = 'none';
+};
+
+const clearError = () => {
+    errorDiv.textContent = '';
+    document.querySelector('.top-bar').style.display = 'flex';
+};
+
+const loadPdfDocument = source => {
+    clearError();
+    pdfjsLib.getDocument(source).promise.then(pdfDoc_ => {
+        pdfDoc = pdfDoc_;
+
+        document.querySelector('#page-count').textContent = pdfDoc.numPages;
+        pageNum = 1;
+        queueRenderPage(pageNum);
+    })
+        .catch(err => {
+            showError('Failed to load PDF: ' + err.message);
+        });
+};
+
+const validatePdfFile = async file => {
+    if (!file) {
+        return 'Please select a PDF file.';
+    }
+
+    if (file.type !== 'application/pdf') {
+        return 'Please select a PDF file.';
+    }
+
+    const header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    if (header[0] !== 0x25 || header[1] !== 0x50 || header[2] !== 0x44 || header[3] !== 0x46) {
+        return 'The selected file is not a PDF.';
+    }
+
+    return null;
+};
+
+fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    const validationError = await validatePdfFile(file);
+    if (validationError) {
+        showError(validationError);
+        return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    loadPdfDocument({ data: arrayBuffer });
+});
+
 // Get Document
-pdfjsLib.getDocument(url).promise.then(pdfDoc_ => {
-    pdfDoc = pdfDoc_;
-
-    document.querySelector('#page-count').textContent = pdfDoc.numPages;
-
-    renderPage(pageNum);
-})
-    .catch(err => {
-        // Display error
-        const div = document.createElement('div');
-        div.className = 'error';
-        div.appendChild(document.createTextNode(err.message));
-        document.querySelector('body').insertBefore(div, canvas);
-        // Remove top bar
-        document.querySelector('.top-bar').style.display = 'none';
-    });
+loadPdfDocument(defaultUrl);
 
 // Button Events
 document.querySelector('#prev-page').addEventListener('click', showPrevPage);
