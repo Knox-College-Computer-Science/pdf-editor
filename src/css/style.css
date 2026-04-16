@@ -4,14 +4,14 @@
 }
 
 .top-bar {
-    background: #333;
-    color: #fff;
+    background: #9833dc;
+    color: #000000;
     padding: 1rem;
 }
 
 .btn {
-    background: coral;
-    color: #fff;
+    background: rgb(253, 224, 34);
+    color: #000000;
     border: none;
     outline: none;
     cursor: pointer;
@@ -26,8 +26,14 @@
     margin-left: 1rem;
 }
 
+.upload-bar {
+    background: #ffffff;
+    padding: 1rem;
+    margin: 1rem;
+}
+
 .error {
-    background: orangered;
-    color: #fff;
+    background: rgb(0, 0, 0);
+    color: #590404;
     padding: 1rem;
 }

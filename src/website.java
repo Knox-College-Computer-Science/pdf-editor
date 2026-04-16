@@ -19,6 +19,9 @@ public class website {
         server.createContext("/pdf.js", new PDFLibHandler());
         // If your pdfview.js is looking for "sample.pdf"
         server.createContext("/pdf.pdf", new PDFFileHandler());
+        
+        // NEW: Handle CSS files
+        server.createContext("/css/style.css", new website.CSSHandler());
 
         server.setExecutor(null);
 
@@ -76,6 +79,17 @@ public class website {
             exchange.sendResponseHeaders(200, response.length);
             exchange.getResponseBody().write(response);
             exchange.getResponseBody().close();
+        }
+    }
+    static class CSSHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            byte[] response = Files.readAllBytes(Paths.get("src/css/style.css"));
+            exchange.getResponseHeaders().set("Content-Type", "text/css");
+            exchange.sendResponseHeaders(200, response.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(response);
+            os.close();
         }
     }
 }
