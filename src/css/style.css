@@ -118,3 +118,37 @@ body {
     top: 0 !important;
     left: 0 !important;
 }
+
+.canvas-container {
+    z-index: 3;
+}
+
+#text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
+    line-height: 1;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+}
+
+#text-layer.highlight-active {
+    pointer-events: auto;
+    z-index: 5;
+}
+
+#text-layer span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+#text-layer ::selection {
+    background: rgba(0, 100, 255, 0.3);
+    color: transparent;
+}
