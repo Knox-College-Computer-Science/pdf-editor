@@ -247,11 +247,6 @@ document.getElementById('brush-size').addEventListener('input', (e) => {
 
 // --- PDF 렌더링 ---
 const renderPage = num => {
-    // 현재 페이지 어노테이션 저장
-    if (fabricCanvas.width > 0) {
-        pageAnnotations[pageNum] = fabricCanvas.toJSON();
-    }
-
     pageIsRendering = true;
 
     pdfDoc.getPage(num).then(page => {
@@ -296,12 +291,14 @@ const queueRenderPage = num => {
 
 const showPrevPage = () => {
     if (pageNum <= 1) return;
+    pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
     pageNum--;
     queueRenderPage(pageNum);
 };
 
 const showNextPage = () => {
     if (pageNum >= pdfDoc.numPages) return;
+    pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
     pageNum++;
     queueRenderPage(pageNum);
 };
@@ -345,7 +342,7 @@ document.getElementById('download-btn').addEventListener('click', async () => {
     if (!originalPdfBytes) return;
 
     // 현재 페이지 어노테이션 저장
-    pageAnnotations[pageNum] = fabricCanvas.toJSON();
+    pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
 
     const { PDFDocument } = PDFLib;
     const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
