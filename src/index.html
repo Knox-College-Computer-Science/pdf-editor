@@ -5,21 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://kit.fontawesome.com/13d8f84616.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <title>PDF editor</title>
-
 </head>
 <body>
 
-<!--    <h1> OH YEAH</h1>-->
-<!--    <h2> Big man</h2>-->
-<!--    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTS3YIVD1OiypPAGfJVkwVjzvom_DdnHx0VrLPsLhhuJJbqsd0ijPH3zaB1CtlyeqfMLLRSTxezK0pibV6OeVXbmCxR0ojB9SkUfZrZVuK4&s=10" style="vertical-align:middle;margin:0px 50px">-->
-<!--    <header> CS399 </header>-->
-<div class = "top-bar">
-    <button class = "btn" id="prev-page">
+<div class="top-bar">
+    <button class="btn" id="prev-page">
         <i class="fas fa-arrow-circle-left"></i> Prev Page
     </button>
-    <button class = "btn" id="next-page">
+    <button class="btn" id="next-page">
         Next Page <i class="fas fa-arrow-circle-right"></i>
     </button>
     <span class="page-info">
@@ -33,10 +30,34 @@
     <div id="file-error" class="error"></div>
 </div>
 
-<canvas id="pdf-render"></canvas>
-<!--<script src="pdf.js-master/src/pdf.js"></script>-->
-<!--<script src ="https://github.com/mozilla/pdf.js.git"></script>"-->
-<!--<script src = "Main.java"></script>-->
+<div class="tool-bar">
+    <button class="tool-btn active" id="tool-select" title="Select">
+        <i class="fas fa-mouse-pointer"></i> Select
+    </button>
+    <button class="tool-btn" id="tool-text" title="Add Text">
+        <i class="fas fa-font"></i> Text
+    </button>
+    <button class="tool-btn" id="tool-draw" title="Draw">
+        <i class="fas fa-pencil-alt"></i> Draw
+    </button>
+    <button class="tool-btn" id="tool-eraser" title="Eraser">
+        <i class="fas fa-eraser"></i> Eraser
+    </button>
+    <input type="color" id="color-picker" value="#e74c3c" title="Color">
+    <input type="range" id="brush-size" min="1" max="20" value="3" title="Brush Size">
+    <button class="tool-btn" id="tool-delete" title="Delete Selected">
+        <i class="fas fa-trash"></i> Delete
+    </button>
+    <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
+        <i class="fas fa-download"></i> Download
+    </button>
+</div>
+
+<div class="canvas-wrapper">
+    <canvas id="pdf-render"></canvas>
+    <canvas id="fabric-canvas"></canvas>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="pdfview.js"></script>
 </body>
