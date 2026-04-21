@@ -43,6 +43,9 @@
     <button class="tool-btn" id="tool-eraser" title="Eraser">
         <i class="fas fa-eraser"></i> Eraser
     </button>
+    <button class="tool-btn" id="tool-highlight" title="Highlight Text">
+        <i class="fas fa-highlighter"></i> Highlight
+    </button>
     <input type="color" id="color-picker" value="#e74c3c" title="Color">
     <input type="range" id="brush-size" min="1" max="20" value="3" title="Brush Size">
     <button class="tool-btn" id="tool-delete" title="Delete Selected">
@@ -55,6 +58,7 @@
 
 <div class="canvas-wrapper">
     <canvas id="pdf-render"></canvas>
+    <div id="text-layer"></div>
     <canvas id="fabric-canvas"></canvas>
 </div>
 

@@ -58,6 +58,41 @@ fabricWrapper.style.left = '0';
 
 let currentTool = 'select';
 
+// ハイライト用テキストレイヤー
+const textLayerDiv = document.getElementById('text-layer');
+
+const ensureTextLayer = async () => {
+    if (textLayerDiv.children.length > 0) return;
+    if (!pdfDoc) return;
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+    const textContent = await page.getTextContent();
+
+    textLayerDiv.innerHTML = '';
+    textLayerDiv.style.width = viewport.width + 'px';
+    textLayerDiv.style.height = viewport.height + 'px';
+
+    textContent.items.forEach(item => {
+        if (!item.str || !item.str.trim()) return;
+        const tx = item.transform;
+        const fontHeight = Math.abs(tx[3]);
+        if (fontHeight === 0 || item.width === 0) return;
+
+        // PDF座標（左下原点）→ Canvas CSS座標（左上原点）
+        const cssLeft = tx[4] * scale;
+        const cssTop = viewport.height - tx[5] * scale - fontHeight * scale;
+
+        const span = document.createElement('span');
+        span.textContent = item.str;
+        span.style.left = cssLeft + 'px';
+        span.style.top = cssTop + 'px';
+        span.style.width = (item.width * scale) + 'px';
+        span.style.height = (fontHeight * scale) + 'px';
+        span.style.fontSize = (fontHeight * scale) + 'px';
+        textLayerDiv.appendChild(span);
+    });
+};
+
 // --- 툴 전환 ---
 const setTool = (tool) => {
     currentTool = tool;
@@ -67,6 +102,13 @@ const setTool = (tool) => {
     const color = document.getElementById('color-picker').value;
     const size = parseInt(document.getElementById('brush-size').value);
 
+    // ハイライトモード解除時はテキストレイヤーをクリア
+    if (tool !== 'highlight') {
+        textLayerDiv.classList.remove('highlight-active');
+        textLayerDiv.innerHTML = '';
+        fabricCanvas.selection = true;
+    }
+
     if (tool === 'draw') {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush.color = color;
@@ -75,6 +117,12 @@ const setTool = (tool) => {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush.color = 'white';
         fabricCanvas.freeDrawingBrush.width = size * 3;
+    } else if (tool === 'highlight') {
+        fabricCanvas.isDrawingMode = false;
+        fabricCanvas.selection = false;
+        document.getElementById('color-picker').value = '#ffff00';
+        textLayerDiv.classList.add('highlight-active');
+        ensureTextLayer();
     } else {
         fabricCanvas.isDrawingMode = false;
     }
@@ -83,6 +131,7 @@ const setTool = (tool) => {
 document.getElementById('tool-select').addEventListener('click', () => setTool('select'));
 document.getElementById('tool-draw').addEventListener('click', () => setTool('draw'));
 document.getElementById('tool-eraser').addEventListener('click', () => setTool('eraser'));
+document.getElementById('tool-highlight').addEventListener('click', () => setTool('highlight'));
 document.getElementById('tool-delete').addEventListener('click', () => {
     const active = fabricCanvas.getActiveObjects();
     active.forEach(obj => fabricCanvas.remove(obj));
@@ -108,6 +157,73 @@ fabricCanvas.on('mouse:down', (e) => {
     fabricCanvas.setActiveObject(text);
     text.enterEditing();
     setTool('select');
+});
+
+// ハイライト: テキスト選択をマウスアップ時に適用
+const hexToRgba = (hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+};
+
+const rectsOverlap = (a, b) =>
+    !(b.x > a.x + a.width || b.x + b.width < a.x ||
+      b.y > a.y + a.height || b.y + b.height < a.y);
+
+textLayerDiv.addEventListener('mouseup', () => {
+    if (currentTool !== 'highlight') return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const range = selection.getRangeAt(0);
+    const rects = Array.from(range.getClientRects());
+    selection.removeAllRanges();
+    if (rects.length === 0) return;
+
+    const canvasBounds = canvas.getBoundingClientRect();
+    const color = document.getElementById('color-picker').value;
+
+    const selRects = rects
+        .filter(r => r.width > 1)
+        .map(r => ({
+            x: r.left - canvasBounds.left,
+            y: r.top - canvasBounds.top,
+            width: r.width,
+            height: r.height,
+        }));
+
+    if (selRects.length === 0) return;
+
+    // 選択範囲と被っている既存ハイライトを探す
+    const existing = fabricCanvas.getObjects().filter(
+        obj => obj.data && obj.data.type === 'highlight'
+    );
+    const toRemove = existing.filter(obj =>
+        selRects.some(sr => rectsOverlap(sr, {
+            x: obj.left, y: obj.top, width: obj.width, height: obj.height,
+        }))
+    );
+
+    if (toRemove.length > 0) {
+        // 既存ハイライトと被っている → 削除
+        toRemove.forEach(obj => fabricCanvas.remove(obj));
+    } else {
+        // 被っていない → 新規追加
+        selRects.forEach(sr => {
+            fabricCanvas.add(new fabric.Rect({
+                left: sr.x,
+                top: sr.y,
+                width: sr.width,
+                height: sr.height,
+                fill: hexToRgba(color, 0.4),
+                selectable: true,
+                evented: true,
+                data: { type: 'highlight' },
+            }));
+        });
+    }
+
+    fabricCanvas.renderAll();
 });
 
 // 색상/브러시 크기 변경
@@ -150,6 +266,9 @@ const renderPage = num => {
             fabricCanvas.setWidth(viewport.width);
             fabricCanvas.setHeight(viewport.height);
             fabricCanvas.clear();
+
+            // ページ変更時はテキストレイヤーをリセット
+            textLayerDiv.innerHTML = '';
 
             // 저장된 어노테이션 복원
             pageDimensions[num] = { width: viewport.width, height: viewport.height };
@@ -293,3 +412,4 @@ document.querySelector('#next-page').addEventListener('click', showNextPage);
 
 // 기본 PDF 로드
 loadPdfDocument(defaultUrl);
+
