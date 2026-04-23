@@ -181,6 +181,20 @@ const showPrevPage = () => {
     queueRenderPage(pageNum);
 };
 
+//Delete button for pages
+document.getElementById("delete-page").addEventListener("click", () =>{
+    if (!pdfDoc) return alert("No PDF Is Loaded.");
+
+    if (pageNum < 0 || pageNum >= pdfDoc.numPages) {
+        alert("invalid Page Index");
+        return;
+}
+
+    pdfDoc.removePage(pageNum);
+    queueRenderPage(pageNum);
+});
+
+
 const showNextPage = () => {
     if (pageNum >= pdfDoc.numPages) return;
     pageNum++;
