@@ -12,20 +12,20 @@ const scale = 1.5,
     fileInput = document.querySelector('#file-input'),
     errorDiv = document.querySelector('#file-error');
 
-// 원본 PDF 바이트 저장 (다운로드용)
+// Store original PDF bytes for download
 let originalPdfBytes = null;
 
-// 페이지별 fabric 어노테이션 저장
+// Per-page fabric annotation storage
 const pageAnnotations = {};
 const pageDimensions = {};
 
-// fabric canvas 초기화
+// Initialize fabric canvas
 const fabricCanvas = new fabric.Canvas('fabric-canvas', {
     isDrawingMode: false,
     selection: true,
 });
 
-// undo 히스토리
+// Undo history
 const undoStack = [];
 const saveHistory = () => {
     undoStack.push(JSON.stringify(fabricCanvas.toJSON()));
@@ -35,6 +35,14 @@ const saveHistory = () => {
 fabricCanvas.on('object:added', saveHistory);
 fabricCanvas.on('object:modified', saveHistory);
 fabricCanvas.on('object:removed', saveHistory);
+
+// Eraser: use destination-out so strokes reveal the PDF underneath
+fabricCanvas.on('path:created', (e) => {
+    if (currentTool === 'eraser') {
+        e.path.set({ globalCompositeOperation: 'destination-out' });
+        fabricCanvas.renderAll();
+    }
+});
 
 document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -50,7 +58,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// fabric이 만든 wrapper div를 PDF 캔버스 위에 정확히 올림
+// Position the fabric wrapper div directly over the PDF canvas
 const fabricWrapper = fabricCanvas.wrapperEl;
 fabricWrapper.style.position = 'absolute';
 fabricWrapper.style.top = '0';
@@ -58,7 +66,51 @@ fabricWrapper.style.left = '0';
 
 let currentTool = 'select';
 
-// ハイライト用テキストレイヤー
+// Font/size controls for text tool
+const textControls = document.getElementById('text-controls');
+const fontFamilySelect = document.getElementById('font-family');
+const fontSizeInput = document.getElementById('font-size');
+
+const getTextProps = () => ({
+    fontFamily: fontFamilySelect.value,
+    fontSize: parseInt(fontSizeInput.value) || 20,
+    fill: document.getElementById('color-picker').value,
+});
+
+fontFamilySelect.addEventListener('change', () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        obj.set('fontFamily', fontFamilySelect.value);
+        fabricCanvas.renderAll();
+    }
+});
+
+fontSizeInput.addEventListener('input', () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        obj.set('fontSize', parseInt(fontSizeInput.value) || 20);
+        fabricCanvas.renderAll();
+    }
+});
+
+// Sync font controls when a text object is selected
+fabricCanvas.on('selection:created', (e) => {
+    const obj = e.selected?.[0];
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        fontFamilySelect.value = obj.fontFamily || 'Arial';
+        fontSizeInput.value = obj.fontSize || 20;
+    }
+});
+
+fabricCanvas.on('selection:updated', (e) => {
+    const obj = e.selected?.[0];
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        fontFamilySelect.value = obj.fontFamily || 'Arial';
+        fontSizeInput.value = obj.fontSize || 20;
+    }
+});
+
+// Text layer for highlight mode
 const textLayerDiv = document.getElementById('text-layer');
 
 const ensureTextLayer = async () => {
@@ -78,7 +130,7 @@ const ensureTextLayer = async () => {
         const fontHeight = Math.abs(tx[3]);
         if (fontHeight === 0 || item.width === 0) return;
 
-        // PDF座標（左下原点）→ Canvas CSS座標（左上原点）
+        // Convert PDF coordinates (bottom-left origin) to CSS coordinates (top-left origin)
         const cssLeft = tx[4] * scale;
         const cssTop = viewport.height - tx[5] * scale - fontHeight * scale;
 
@@ -93,16 +145,17 @@ const ensureTextLayer = async () => {
     });
 };
 
-// --- 툴 전환 ---
+// --- Tool switching ---
 const setTool = (tool) => {
     currentTool = tool;
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`tool-${tool}`)?.classList.add('active');
+    textControls.classList.toggle('visible', tool === 'text');
 
     const color = document.getElementById('color-picker').value;
     const size = parseInt(document.getElementById('brush-size').value);
 
-    // ハイライトモード解除時はテキストレイヤーをクリア
+    // Clear text layer when leaving highlight mode
     if (tool !== 'highlight') {
         textLayerDiv.classList.remove('highlight-active');
         textLayerDiv.innerHTML = '';
@@ -115,7 +168,7 @@ const setTool = (tool) => {
         fabricCanvas.freeDrawingBrush.width = size;
     } else if (tool === 'eraser') {
         fabricCanvas.isDrawingMode = true;
-        fabricCanvas.freeDrawingBrush.color = 'white';
+        fabricCanvas.freeDrawingBrush.color = 'rgba(0,0,0,1)';
         fabricCanvas.freeDrawingBrush.width = size * 3;
     } else if (tool === 'highlight') {
         fabricCanvas.isDrawingMode = false;
@@ -139,19 +192,20 @@ document.getElementById('tool-delete').addEventListener('click', () => {
     fabricCanvas.renderAll();
 });
 
-// 텍스트 추가: 캔버스 클릭 시
+// Add text on canvas click
 document.getElementById('tool-text').addEventListener('click', () => setTool('text'));
 fabricCanvas.on('mouse:down', (e) => {
     if (currentTool !== 'text') return;
-    if (e.target) return; // 기존 오브젝트 클릭 시 무시
+    if (e.target) return; // Ignore clicks on existing objects
 
     const pointer = fabricCanvas.getPointer(e.e);
+    const { fontFamily, fontSize, fill } = getTextProps();
     const text = new fabric.IText('Type here', {
         left: pointer.x,
         top: pointer.y,
-        fontSize: 20,
-        fill: document.getElementById('color-picker').value,
-        fontFamily: 'Arial',
+        fontSize,
+        fill,
+        fontFamily,
     });
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
@@ -159,7 +213,7 @@ fabricCanvas.on('mouse:down', (e) => {
     setTool('select');
 });
 
-// ハイライト: テキスト選択をマウスアップ時に適用
+// Highlight: apply highlight on mouse up after text selection
 const hexToRgba = (hex, alpha) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -169,7 +223,7 @@ const hexToRgba = (hex, alpha) => {
 
 const rectsOverlap = (a, b) =>
     !(b.x > a.x + a.width || b.x + b.width < a.x ||
-      b.y > a.y + a.height || b.y + b.height < a.y);
+        b.y > a.y + a.height || b.y + b.height < a.y);
 
 textLayerDiv.addEventListener('mouseup', () => {
     if (currentTool !== 'highlight') return;
@@ -194,7 +248,7 @@ textLayerDiv.addEventListener('mouseup', () => {
 
     if (selRects.length === 0) return;
 
-    // 選択範囲と被っている既存ハイライトを探す
+    // Find existing highlights that overlap with the selection
     const existing = fabricCanvas.getObjects().filter(
         obj => obj.data && obj.data.type === 'highlight'
     );
@@ -205,10 +259,10 @@ textLayerDiv.addEventListener('mouseup', () => {
     );
 
     if (toRemove.length > 0) {
-        // 既存ハイライトと被っている → 削除
+        // Overlaps existing highlight — remove it
         toRemove.forEach(obj => fabricCanvas.remove(obj));
     } else {
-        // 被っていない → 新規追加
+        // No overlap — add new highlight
         selRects.forEach(sr => {
             fabricCanvas.add(new fabric.Rect({
                 left: sr.x,
@@ -226,7 +280,7 @@ textLayerDiv.addEventListener('mouseup', () => {
     fabricCanvas.renderAll();
 });
 
-// 색상/브러시 크기 변경
+// Color and brush size change
 document.getElementById('color-picker').addEventListener('input', (e) => {
     if (fabricCanvas.isDrawingMode && currentTool === 'draw') {
         fabricCanvas.freeDrawingBrush.color = e.target.value;
@@ -245,7 +299,7 @@ document.getElementById('brush-size').addEventListener('input', (e) => {
     }
 });
 
-// --- サイドバー ---
+// --- Sidebar thumbnails ---
 const THUMB_SCALE = 0.25;
 
 const updateSidebarActive = () => {
@@ -277,7 +331,7 @@ const renderSidebar = async () => {
         wrapper.addEventListener('click', () => goToPage(parseInt(wrapper.dataset.page)));
         container.appendChild(wrapper);
 
-        // サムネイルを非同期で描画
+        // Render thumbnail asynchronously
         (async (pageIndex, imgEl) => {
             const page = await pdfDoc.getPage(pageIndex);
             const vp = page.getViewport({ scale: THUMB_SCALE });
@@ -298,7 +352,7 @@ const goToPage = (num) => {
     updateSidebarActive();
 };
 
-// --- PDF 렌더링 ---
+// --- PDF rendering ---
 const renderPage = num => {
     pageIsRendering = true;
 
@@ -310,15 +364,15 @@ const renderPage = num => {
         page.render({ canvasContext: ctx, viewport }).promise.then(() => {
             pageIsRendering = false;
 
-            // fabric 캔버스 크기 맞추기
+            // Resize fabric canvas to match the PDF page
             fabricCanvas.setWidth(viewport.width);
             fabricCanvas.setHeight(viewport.height);
             fabricCanvas.clear();
 
-            // ページ変更時はテキストレイヤーをリセット
+            // Reset text layer on page change
             textLayerDiv.innerHTML = '';
 
-            // 저장된 어노테이션 복원
+            // Restore saved annotations for this page
             pageDimensions[num] = { width: viewport.width, height: viewport.height };
             if (pageAnnotations[num]) {
                 fabricCanvas.loadFromJSON(pageAnnotations[num], () => fabricCanvas.renderAll());
@@ -393,11 +447,38 @@ const loadPdfDocument = async (source) => {
     }
 };
 
-// --- 다운로드 ---
+// --- Delete current page ---
+document.getElementById('delete-page-btn').addEventListener('click', async () => {
+    if (!originalPdfBytes) return;
+    if (pdfDoc.numPages === 1) {
+        alert('Cannot delete the only page.');
+        return;
+    }
+    if (!confirm(`Delete page ${pageNum}?`)) return;
+
+    const { PDFDocument } = PDFLib;
+    const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
+    pdfLibDoc.removePage(pageNum - 1);
+
+    const savedBytes = await pdfLibDoc.save();
+    originalPdfBytes = savedBytes.buffer;
+
+    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+    const targetPage = Math.min(pageNum, pdfLibDoc.getPageCount());
+    pageNum = targetPage;
+
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(savedBytes) }).promise;
+    pdfDoc = doc;
+    document.querySelector('#page-count').textContent = pdfDoc.numPages;
+    renderPage(pageNum);
+    renderSidebar();
+});
+
+// --- Download ---
 document.getElementById('download-btn').addEventListener('click', async () => {
     if (!originalPdfBytes) return;
 
-    // 현재 페이지 어노테이션 저장
+    // Save current page annotations before download
     pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
 
     const { PDFDocument } = PDFLib;
@@ -412,7 +493,7 @@ document.getElementById('download-btn').addEventListener('click', async () => {
         const dim = pageDimensions[pNum];
         if (!dim) continue;
 
-        // 임시 fabric StaticCanvas로 PNG 생성
+        // Render annotations to PNG using a temporary StaticCanvas
         const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
         await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
         tempCanvas.renderAll();
@@ -437,7 +518,7 @@ document.getElementById('download-btn').addEventListener('click', async () => {
     URL.revokeObjectURL(url);
 });
 
-// --- 파일 업로드 ---
+// --- File upload ---
 const validatePdfFile = async file => {
     if (!file) return 'Please select a PDF file.';
     if (file.type !== 'application/pdf') return 'Please select a PDF file.';
@@ -459,10 +540,9 @@ fileInput.addEventListener('change', async e => {
     loadPdfDocument({ data: arrayBuffer });
 });
 
-// 버튼 이벤트
+// Button events
 document.querySelector('#prev-page').addEventListener('click', showPrevPage);
 document.querySelector('#next-page').addEventListener('click', showNextPage);
 
-// 기본 PDF 로드
+// Load default PDF
 loadPdfDocument(defaultUrl);
-
