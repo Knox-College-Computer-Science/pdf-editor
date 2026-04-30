@@ -1,3 +1,30 @@
+// import { fabric } from './fabric.js-master/dist/index.mjs';
+// import './fabric-eraser-brush.js';
+(function() {
+    if (typeof fabric === 'undefined') return;
+
+    fabric.EraserBrush = fabric.util.createClass(fabric.PencilBrush, {
+        type: 'eraser',
+        // This handles the "live" drawing look
+        _setBrushStyles: function(ctx) {
+            this.callSuper('_setBrushStyles', ctx);
+            ctx.globalCompositeOperation = 'destination-out';
+        },
+        // This ensures the path being drawn is subtracting pixels
+        _render: function() {
+            var ctx = this.canvas.contextTop;
+            ctx.globalCompositeOperation = 'destination-out';
+            this.callSuper('_render');
+            ctx.globalCompositeOperation = 'source-over';
+        },
+        // This ensures the final object created is an "eraser" path
+        createPath: function(pathData) {
+            var path = this.callSuper('createPath', pathData);
+            path.globalCompositeOperation = 'destination-out';
+            return path;
+        }
+    });
+})();
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const defaultUrl = 'pdf.pdf';
 
@@ -23,6 +50,25 @@ const pageDimensions = {};
 const fabricCanvas = new fabric.Canvas('fabric-canvas', {
     isDrawingMode: false,
     selection: true,
+    backgroundColor: 'rgba(0,0,0,0)'
+});
+// Add this near your fabricCanvas initialization
+fabricCanvas.on('path:created', function(e) {
+    if (currentTool === 'eraser') {
+        const path = e.path;
+        path.set({
+            // This is the composite operation you wanted!
+            globalCompositeOperation: 'destination-out',
+            selectable: false,
+            evented: false,
+            stroke: 'black', // The color doesn't matter, it's now a "hole"
+            fill: null
+        });
+        
+        // Move it to the front so it erases everything beneath it
+        fabricCanvas.bringToFront(path);
+        fabricCanvas.renderAll();
+    }
 });
 
 // undo 히스토리
@@ -102,28 +148,36 @@ const setTool = (tool) => {
     const color = document.getElementById('color-picker').value;
     const size = parseInt(document.getElementById('brush-size').value);
 
-    // ハイライトモード解除時はテキストレイヤーをクリア
+    // Reset text layer
     if (tool !== 'highlight') {
         textLayerDiv.classList.remove('highlight-active');
         textLayerDiv.innerHTML = '';
         fabricCanvas.selection = true;
     }
 
-    if (tool === 'draw') {
-        fabricCanvas.isDrawingMode = true;
+    // --- CONSOLIDATED TOOL LOGIC ---
+    if (tool === 'eraser') {
+      fabricCanvas.isDrawingMode = true;
+    fabricCanvas.freeDrawingBrush = new fabric.EraserBrush(fabricCanvas);
+    fabricCanvas.freeDrawingBrush.width = size || 30;
+    // Color doesn't matter for destination-out, but keep it transparent-ish 
+    // to avoid seeing a black flash before it renders.
+    fabricCanvas.freeDrawingBrush.color = 'rgba(0,0,0,0)';
+    } else if (tool === 'draw') {
+        fabricCanvas.isDrawingMode = true; 
+        fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
         fabricCanvas.freeDrawingBrush.color = color;
         fabricCanvas.freeDrawingBrush.width = size;
-    } else if (tool === 'eraser') {
-        fabricCanvas.isDrawingMode = true;
-        fabricCanvas.freeDrawingBrush.color = 'white';
-        fabricCanvas.freeDrawingBrush.width = size * 3;
+
     } else if (tool === 'highlight') {
         fabricCanvas.isDrawingMode = false;
         fabricCanvas.selection = false;
         document.getElementById('color-picker').value = '#ffff00';
         textLayerDiv.classList.add('highlight-active');
         ensureTextLayer();
+
     } else {
+        // Selection/Pointer mode
         fabricCanvas.isDrawingMode = false;
     }
 };
