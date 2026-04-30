@@ -474,11 +474,17 @@ document.getElementById('delete-page-btn').addEventListener('click', async () =>
     renderSidebar();
 });
 
-// --- Download ---
-document.getElementById('download-btn').addEventListener('click', async () => {
-    if (!originalPdfBytes) return;
+// --- Toast通知 ---
+const showToast = (message, type = 'success') => {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast ${type} show`;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.className = 'toast'; }, 2500);
+};
 
-    // Save current page annotations before download
+// --- アノテーション済みPDFバイト列を生成 ---
+const buildAnnotatedPdfBytes = async () => {
     pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
 
     const { PDFDocument } = PDFLib;
@@ -493,7 +499,6 @@ document.getElementById('download-btn').addEventListener('click', async () => {
         const dim = pageDimensions[pNum];
         if (!dim) continue;
 
-        // Render annotations to PNG using a temporary StaticCanvas
         const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
         await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
         tempCanvas.renderAll();
@@ -508,7 +513,14 @@ document.getElementById('download-btn').addEventListener('click', async () => {
         page.drawImage(pngImage, { x: 0, y: 0, width, height });
     }
 
-    const savedBytes = await pdfLibDoc.save();
+    return pdfLibDoc.save();
+};
+
+// --- Download ---
+document.getElementById('download-btn').addEventListener('click', async () => {
+    if (!originalPdfBytes) return;
+
+    const savedBytes = await buildAnnotatedPdfBytes();
     const blob = new Blob([savedBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -516,6 +528,31 @@ document.getElementById('download-btn').addEventListener('click', async () => {
     a.download = 'edited.pdf';
     a.click();
     URL.revokeObjectURL(url);
+});
+
+// --- Save ---
+document.getElementById('save-btn').addEventListener('click', async () => {
+    if (!originalPdfBytes) return;
+
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+    try {
+        const savedBytes = await buildAnnotatedPdfBytes();
+        const res = await fetch('/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/pdf' },
+            body: savedBytes,
+        });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        showToast('Saved!', 'success');
+    } catch (err) {
+        showToast('Save failed: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Save';
+    }
 });
 
 // --- File upload ---

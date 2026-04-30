@@ -8,7 +8,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 public class website {
     public static void web (String[] args) throws IOException {
@@ -27,6 +26,7 @@ public class website {
         server.createContext("/css/style.css", new website.CSSHandler());
 
         server.createContext("/upload", new website.UploadHandler());
+        server.createContext("/save", new website.SaveHandler());
 
         server.setExecutor(null);
 
@@ -121,6 +121,41 @@ public class website {
             System.out.println("Received PDF: " + filename + " (" + fileBytes.length + " bytes)");
 
             String response = "{\"status\": \"ok\", \"filename\": \"" + filename + "\"}";
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.sendResponseHeaders(200, response.length());
+            exchange.getResponseBody().write(response.getBytes());
+            exchange.getResponseBody().close();
+        }
+    }
+
+    static class SaveHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            InputStream is = exchange.getRequestBody();
+            byte[] fileBytes = is.readAllBytes();
+            is.close();
+
+            if (fileBytes.length < 4 ||
+                fileBytes[0] != 0x25 || fileBytes[1] != 0x50 ||
+                fileBytes[2] != 0x44 || fileBytes[3] != 0x46) {
+                String error = "{\"error\": \"Invalid PDF file\"}";
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(400, error.length());
+                exchange.getResponseBody().write(error.getBytes());
+                exchange.getResponseBody().close();
+                return;
+            }
+
+            Files.write(Paths.get("src/pdf.pdf"), fileBytes);
+            System.out.println("Saved PDF: " + fileBytes.length + " bytes");
+
+            String response = "{\"status\": \"ok\"}";
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.sendResponseHeaders(200, response.length());
