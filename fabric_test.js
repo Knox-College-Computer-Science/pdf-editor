@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://kit.fontawesome.com/13d8f84616.js" crossorigin="anonymous"></script>
-    <!-- <script src="/fabric.js"></script> -->
+    <script src="/fabric.js"></script>
     <!-- <script src="https://cdn.jsdelivr.net/npm/fabric-eraser-brush@1.1.0/dist/index.browser.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
@@ -71,9 +71,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<!-- <script src="fabric.js-master/dist/index.min.js"></script> -->
- <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
- <!-- <script src="./fabric-eraser-brush.js"></script> -->
 <script src="pdfview.js"></script>
 </body>
 </html>

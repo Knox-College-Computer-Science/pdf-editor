@@ -1,14 +1,13 @@
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpExchange;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 public class website {
     public static void web (String[] args) throws IOException {
@@ -16,8 +15,10 @@ public class website {
 
         server.createContext("/", new website.HelloHandler());
 
-        // 2. NEW: This tells the server how to handle the request for your JS file
+        // 2. NEW: This tells the server how to handle the request for your JS files
         server.createContext("/pdfview.js", new website.JSHandler());
+        server.createContext("/Tool.js", new website.JSHandler());
+        server.createContext("/fabric-eraser-brush.js", new website.FabricEraserBrushHandler());
 
         server.createContext("/pdf.js", new PDFLibHandler());
         // If your pdfview.js is looking for "sample.pdf"
@@ -25,6 +26,8 @@ public class website {
         
         // NEW: Handle CSS files
         server.createContext("/css/style.css", new website.CSSHandler());
+
+        // server.createContext("/fabric.js", new website.FabricHandler());
 
         server.createContext("/upload", new website.UploadHandler());
 
@@ -38,17 +41,42 @@ public class website {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException{
+            String path = exchange.getRequestURI().getPath();
 
-            byte[] response = Files.readAllBytes(Paths.get("src/index.html"));
-            //String response = "hello";
+            if ("/fabric.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/fabric.js-master/dist-extensions/fabric-extensions.min.js"), "application/javascript");
+                return;
+            }
+            if ("/pdfview.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/pdfview.js"), "application/javascript");
+                return;
+            }
+            if ("/css/style.css".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/css/style.css"), "text/css");
+                return;
+            }
+            if ("/pdf.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/pdf.js-master/src/pdf.js"), "application/javascript");
+                return;
+            }
+            if ("/pdf.pdf".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/pdf.pdf"), "application/pdf");
+                return;
+            }
 
-            exchange.sendResponseHeaders(200,response.length);
-
-            OutputStream os = exchange.getResponseBody();
-
-            os.write(response);
-            os.close();
+            sendStaticFile(exchange, Paths.get("src/index.html"), "text/html");
         }
+    }
+
+    private static void sendStaticFile(HttpExchange exchange, Path path, String contentType) throws IOException {
+        byte[] response = Files.readAllBytes(path);
+        if (contentType != null) {
+            exchange.getResponseHeaders().set("Content-Type", contentType);
+        }
+        exchange.sendResponseHeaders(200, response.length);
+        OutputStream os = exchange.getResponseBody();
+        os.write(response);
+        os.close();
     }
     // NEW: HANDLER FOR JAVASCRIPT
     static class JSHandler implements HttpHandler {
@@ -75,6 +103,17 @@ public class website {
             exchange.getResponseBody().close();
         }
     }
+    // static class FabricHandler implements HttpHandler {
+    //     @Override
+    //     public void handle(HttpExchange exchange) throws IOException {
+    //         byte[] response = Files.readAllBytes(Paths.get("src/fabric.js-master/dist-extensions/fabric-extensions.min.js"));
+    //         exchange.getResponseHeaders().set("Content-Type", "application/javascript");
+    //         exchange.sendResponseHeaders(200, response.length);
+    //         OutputStream os = exchange.getResponseBody();
+    //         os.write(response);
+    //         os.close();
+    //     }
+    // }
     static class PDFFileHandler implements HttpHandler {
         public void handle(HttpExchange exchange) throws IOException {
             // Change "src/sample.pdf" to whatever your file is actually named!
@@ -140,4 +179,18 @@ public class website {
             os.close();
         }
     }
+
+    static class FabricEraserBrushHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            byte[] response = Files.readAllBytes(Paths.get("src/fabric-eraser-brush.js"));
+            exchange.getResponseHeaders().set("Content-Type", "application/javascript");
+            exchange.sendResponseHeaders(200, response.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(response);
+            os.close();
+        }
+    }
+
+    
 }
