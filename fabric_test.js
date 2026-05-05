@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://kit.fontawesome.com/13d8f84616.js" crossorigin="anonymous"></script>
+    <script src="/fabric.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/fabric-eraser-brush@1.1.0/dist/index.browser.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
-    <script src="JS/Tool.js"></script>
-    <script src="JS/Undo.js"></script>
-    <script src="JS/Sidebar.js"></script>
     <title>PDF editor</title>
 </head>
 <body>
@@ -50,24 +49,8 @@
     </button>
     <input type="color" id="color-picker" value="#e74c3c" title="Color">
     <input type="range" id="brush-size" min="1" max="20" value="3" title="Brush Size">
-    <div class="text-controls" id="text-controls">
-        <select id="font-family" title="Font">
-            <option value="Arial">Arial</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Trebuchet MS">Trebuchet MS</option>
-            <option value="Impact">Impact</option>
-        </select>
-        <input type="number" id="font-size" value="20" min="6" max="200" title="Font Size">
-        <span class="text-controls-label">px</span>
-    </div>
     <button class="tool-btn" id="tool-delete" title="Delete Selected">
         <i class="fas fa-trash"></i> Delete
-    </button>
-    <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
-        <i class="fas fa-file-times"></i> Delete Page
     </button>
     <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
         <i class="fas fa-download"></i> Download
@@ -88,7 +71,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-<script src="JS/pdfview.js"></script>
+<script src="pdfview.js"></script>
 </body>
 </html>
