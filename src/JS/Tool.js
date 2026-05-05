@@ -2,12 +2,20 @@
 
 let currentTool = 'select';
 
+const getTextProps = () => ({
+    fontFamily: document.getElementById('font-family').value,
+    fontSize: parseInt(document.getElementById('font-size').value) || 20,
+    fill: document.getElementById('color-picker').value,
+});
+
 const setTool = (tool) => {
     currentTool = tool;
     updateToolButtons();
 
     const color = document.getElementById('color-picker').value;
     const size = parseInt(document.getElementById('brush-size').value, 10) || 3;
+    const textControls = document.getElementById('text-controls');
+    if (textControls) textControls.classList.toggle('visible', tool === 'text');
 
     if (tool !== 'highlight') {
         textLayerDiv.classList.remove('highlight-active');
@@ -93,17 +101,42 @@ const handlePathCreated = (e) => {
 const handleCanvasMouseDown = (e) => {
     if (currentTool !== 'text' || e.target) return;
     const pointer = fabricCanvas.getPointer(e.e);
+    const { fontFamily, fontSize, fill } = getTextProps();
     const text = new fabric.IText('Type here', {
         left: pointer.x,
         top: pointer.y,
-        fontSize: 20,
-        fill: document.getElementById('color-picker').value,
-        fontFamily: 'Arial',
+        fontSize,
+        fill,
+        fontFamily,
     });
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
     text.enterEditing();
     setTool('select');
+};
+
+const handleFontFamilyChange = () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        obj.set('fontFamily', document.getElementById('font-family').value);
+        fabricCanvas.renderAll();
+    }
+};
+
+const handleFontSizeChange = () => {
+    const obj = fabricCanvas.getActiveObject();
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        obj.set('fontSize', parseInt(document.getElementById('font-size').value) || 20);
+        fabricCanvas.renderAll();
+    }
+};
+
+const syncFontControls = (e) => {
+    const obj = e.selected?.[0];
+    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
+        document.getElementById('font-family').value = obj.fontFamily || 'Arial';
+        document.getElementById('font-size').value = obj.fontSize || 20;
+    }
 };
 
 const handleTextLayerHighlight = () => {
@@ -171,7 +204,12 @@ const initTools = () => {
 
     fabricCanvas.on('path:created', handlePathCreated);
     fabricCanvas.on('mouse:down', handleCanvasMouseDown);
+    fabricCanvas.on('selection:created', syncFontControls);
+    fabricCanvas.on('selection:updated', syncFontControls);
     textLayerDiv.addEventListener('mouseup', handleTextLayerHighlight);
+
+    document.getElementById('font-family').addEventListener('change', handleFontFamilyChange);
+    document.getElementById('font-size').addEventListener('input', handleFontSizeChange);
 };
 
 window.addEventListener('DOMContentLoaded', () => {

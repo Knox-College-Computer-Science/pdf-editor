@@ -195,6 +195,32 @@ const loadPdfDocument = async (source) => {
     }
 };
 
+// --- 페이지 삭제 ---
+document.getElementById('delete-page-btn').addEventListener('click', async () => {
+    if (!originalPdfBytes) return;
+    if (pdfDoc.numPages === 1) {
+        alert('Cannot delete the only page.');
+        return;
+    }
+    if (!confirm(`Delete page ${pageNum}?`)) return;
+
+    const { PDFDocument } = PDFLib;
+    const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
+    pdfLibDoc.removePage(pageNum - 1);
+
+    const savedBytes = await pdfLibDoc.save();
+    originalPdfBytes = savedBytes.buffer;
+
+    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+    pageNum = Math.min(pageNum, pdfLibDoc.getPageCount());
+
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(savedBytes) }).promise;
+    pdfDoc = doc;
+    document.querySelector('#page-count').textContent = pdfDoc.numPages;
+    renderPage(pageNum);
+    renderSidebar();
+});
+
 // --- 다운로드 ---
 document.getElementById('download-btn').addEventListener('click', async () => {
     if (!originalPdfBytes) return;
