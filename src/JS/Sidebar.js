@@ -1,4 +1,4 @@
-// --- サイドバー ---
+// --- Sidebar ---
 const THUMB_SCALE = 0.25;
 
 const updateSidebarActive = () => {
@@ -30,7 +30,7 @@ const renderSidebar = async () => {
         wrapper.addEventListener('click', () => goToPage(parseInt(wrapper.dataset.page)));
         container.appendChild(wrapper);
 
-        // サムネイルを非同期で描画
+        // Render each thumbnail asynchronously
         (async (pageIndex, imgEl) => {
             const page = await pdfDoc.getPage(pageIndex);
             const vp = page.getViewport({ scale: THUMB_SCALE });

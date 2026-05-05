@@ -237,7 +237,7 @@ const ensureTextLayer = async () => {
         const fontHeight = Math.abs(tx[3]);
         if (fontHeight === 0 || item.width === 0) return;
 
-        // PDF座標（左下原点）→ Canvas CSS座標（左上原点）
+        // Convert PDF coordinates (bottom-left origin) to CSS coordinates (top-left origin)
         const cssLeft = tx[4] * scale;
         const cssTop = viewport.height - tx[5] * scale - fontHeight * scale;
 
