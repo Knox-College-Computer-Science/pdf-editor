@@ -28,7 +28,11 @@
 
 <div class="upload-bar">
     <label for="file-input" class="file-label">Select a file to upload</label>
-    <input id="file-input" type="file">
+    <input id="file-input" type="file" accept="application/pdf">
+    <label for="insert-pdf-input" class="file-label insert-label" id="insert-pdf-btn" title="Insert another PDF at the end of the current document">
+        <i class="fas fa-file-import"></i> Insert PDF
+    </label>
+    <input id="insert-pdf-input" type="file" accept="application/pdf">
     <div id="file-error" class="error"></div>
 </div>
 

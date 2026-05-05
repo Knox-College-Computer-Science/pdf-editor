@@ -40,49 +40,46 @@ const scale = 1.5,
     fileInput = document.querySelector('#file-input'),
     errorDiv = document.querySelector('#file-error');
 
-// 원본 PDF 바이트 저장 (다운로드용)
+// Stores the raw bytes of the currently loaded PDF for download and editing
 let originalPdfBytes = null;
 
-// 페이지별 fabric 어노테이션 저장
+// Per-page fabric annotation storage, keyed by page number
 const pageAnnotations = {};
 const pageDimensions = {};
 
-// fabric canvas 초기화
+// Initialize the fabric canvas for annotations
 const fabricCanvas = new fabric.Canvas('fabric-canvas', {
     isDrawingMode: false,
     selection: true,
     backgroundColor: 'rgba(0,0,0,0)'
 });
-// Add this near your fabricCanvas initialization
+// Ensure eraser paths use destination-out so they cut through annotations
 fabricCanvas.on('path:created', function(e) {
     if (currentTool === 'eraser') {
         const path = e.path;
         path.set({
-            // This is the composite operation you wanted!
             globalCompositeOperation: 'destination-out',
             selectable: false,
             evented: false,
-            stroke: 'black', // The color doesn't matter, it's now a "hole"
+            stroke: 'black',
             fill: null
         });
-        
-        // Move it to the front so it erases everything beneath it
         fabricCanvas.bringToFront(path);
         fabricCanvas.renderAll();
     }
 });
-//this call is what makes undo work, it call the other class etc
+// Initialize undo/redo stack defined in Undo.js
 if (typeof initUndo === 'function') {
     initUndo(fabricCanvas);
 }
 
-// fabric이 만든 wrapper div를 PDF 캔버스 위에 정확히 올림
+// Position the fabric wrapper div directly over the PDF canvas
 const fabricWrapper = fabricCanvas.wrapperEl;
 fabricWrapper.style.position = 'absolute';
 fabricWrapper.style.top = '0';
 fabricWrapper.style.left = '0';
 
-// // Text Layer for Highlighting
+// Text layer used for highlight mode
 const textLayerDiv = document.getElementById('text-layer');
 
 
@@ -100,7 +97,7 @@ const goToPage = (num) => {
     updateSidebarActive();
 };
 
-// --- PDF 렌더링 ---
+// --- PDF rendering ---
 const renderPage = num => {
     pageIsRendering = true;
 
@@ -112,15 +109,15 @@ const renderPage = num => {
         page.render({ canvasContext: ctx, viewport }).promise.then(() => {
             pageIsRendering = false;
 
-            // fabric 캔버스 크기 맞추기
+            // Resize fabric canvas to match the rendered PDF page
             fabricCanvas.setWidth(viewport.width);
             fabricCanvas.setHeight(viewport.height);
             fabricCanvas.clear();
 
-            // ページ変更時はテキストレイヤーをリセット
+            // Reset text layer on page change
             textLayerDiv.innerHTML = '';
 
-            // 저장된 어노테이션 복원
+            // Restore saved annotations for this page
             pageDimensions[num] = { width: viewport.width, height: viewport.height };
             if (pageAnnotations[num]) {
                 fabricCanvas.loadFromJSON(pageAnnotations[num], () => fabricCanvas.renderAll());
@@ -195,7 +192,7 @@ const loadPdfDocument = async (source) => {
     }
 };
 
-// --- 페이지 삭제 ---
+// --- Delete page ---
 document.getElementById('delete-page-btn').addEventListener('click', async () => {
     if (!originalPdfBytes) return;
     if (pdfDoc.numPages === 1) {
@@ -221,11 +218,11 @@ document.getElementById('delete-page-btn').addEventListener('click', async () =>
     renderSidebar();
 });
 
-// --- 다운로드 ---
+// --- Download ---
 document.getElementById('download-btn').addEventListener('click', async () => {
     if (!originalPdfBytes) return;
 
-    // 현재 페이지 어노테이션 저장
+    // Save current page annotations before building the output PDF
     pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
 
     const { PDFDocument } = PDFLib;
@@ -240,7 +237,7 @@ document.getElementById('download-btn').addEventListener('click', async () => {
         const dim = pageDimensions[pNum];
         if (!dim) continue;
 
-        // 임시 fabric StaticCanvas로 PNG 생성
+        // Render annotations to a temporary StaticCanvas and export as PNG
         const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
         await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
         tempCanvas.renderAll();
@@ -265,7 +262,7 @@ document.getElementById('download-btn').addEventListener('click', async () => {
     URL.revokeObjectURL(url);
 });
 
-// --- 파일 업로드 ---
+// --- File upload ---
 const validatePdfFile = async file => {
     if (!file) return 'Please select a PDF file.';
     if (file.type !== 'application/pdf') return 'Please select a PDF file.';
@@ -287,10 +284,47 @@ fileInput.addEventListener('change', async e => {
     loadPdfDocument({ data: arrayBuffer });
 });
 
-// 버튼 이벤트
+// --- Insert PDF ---
+document.getElementById('insert-pdf-input').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const validationError = await validatePdfFile(file);
+    if (validationError) {
+        showError(validationError);
+        return;
+    }
+    if (!originalPdfBytes) {
+        showError('Please open a PDF first before inserting.');
+        return;
+    }
+
+    const { PDFDocument } = PDFLib;
+    const [baseDoc, insertDoc] = await Promise.all([
+        PDFDocument.load(originalPdfBytes),
+        PDFDocument.load(await file.arrayBuffer()),
+    ]);
+
+    const copiedPages = await baseDoc.copyPages(insertDoc, insertDoc.getPageIndices());
+    copiedPages.forEach(page => baseDoc.addPage(page));
+
+    const mergedBytes = await baseDoc.save();
+    originalPdfBytes = mergedBytes.buffer;
+
+    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(mergedBytes) }).promise;
+    pdfDoc = doc;
+    document.querySelector('#page-count').textContent = pdfDoc.numPages;
+    renderPage(pageNum);
+    renderSidebar();
+});
+
+// Button events
 document.querySelector('#prev-page').addEventListener('click', showPrevPage);
 document.querySelector('#next-page').addEventListener('click', showNextPage);
 
-// 기본 PDF 로드
+// Load the default PDF on startup
 loadPdfDocument(defaultUrl);
 

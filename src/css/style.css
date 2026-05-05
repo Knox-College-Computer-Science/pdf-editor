@@ -42,6 +42,28 @@ body {
 .upload-bar {
     background: #ffffff;
     padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.insert-label {
+    background: #9833dc;
+    color: #fff;
+    border-radius: 4px;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.insert-label:hover {
+    background: #7a28b0;
+}
+
+#insert-pdf-input {
+    display: none;
 }
 
 .error {
