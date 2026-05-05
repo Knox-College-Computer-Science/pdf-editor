@@ -42,6 +42,28 @@ body {
 .upload-bar {
     background: #ffffff;
     padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.insert-label {
+    background: #9833dc;
+    color: #fff;
+    border-radius: 4px;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.insert-label:hover {
+    background: #7a28b0;
+}
+
+#insert-pdf-input {
+    display: none;
 }
 
 .error {
@@ -79,8 +101,16 @@ body {
     background: #555;
 }
 
-.download-btn {
+.delete-page-btn {
     margin-left: auto;
+    background: #c0392b;
+}
+
+.delete-page-btn:hover {
+    background: #a93226;
+}
+
+.download-btn {
     background: #9833dc;
 }
 
@@ -101,6 +131,45 @@ body {
 #brush-size {
     width: 80px;
     cursor: pointer;
+}
+
+.text-controls {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    background: #3a3a3a;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+}
+
+.text-controls.visible {
+    display: flex;
+}
+
+.text-controls-label {
+    color: #aaa;
+    font-size: 0.8rem;
+}
+
+#font-family {
+    background: #555;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+#font-size {
+    width: 54px;
+    background: #555;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.82rem;
+    text-align: center;
 }
 
 /* Layout */

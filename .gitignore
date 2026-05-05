@@ -1,3 +1,5 @@
 .claude/
 out/
 *.class
+node_modules/
+package-lock.json
