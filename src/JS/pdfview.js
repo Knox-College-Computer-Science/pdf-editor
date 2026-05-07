@@ -127,12 +127,26 @@ const initEditorElements = () => {
         }
         const savedBytes = await pdfLibDoc.save();
         const blob = new Blob([savedBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'edited.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
+        if (window.showSaveFilePicker) {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'edited.pdf',
+                    types: [{ description: 'PDF ファイル', accept: { 'application/pdf': ['.pdf'] } }]
+                });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } catch (err) {
+                if (err.name !== 'AbortError') throw err;
+            }
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'edited.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
     });
 
     document.querySelector('#prev-page').addEventListener('click', showPrevPage);
