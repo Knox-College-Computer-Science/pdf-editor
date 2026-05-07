@@ -163,6 +163,55 @@ const pageDimensions = {};
 // fabricCanvas and textLayerDiv are initialized after the editor is shown
 let fabricCanvas, textLayerDiv;
 
+// fromPage: 1-based page being moved
+// insertBefore: 1-based page to insert before (total+1 = append at end)
+const reorderPages = async (fromPage, insertBefore) => {
+    if (!originalPdfBytes) return;
+    // No-op: inserting a page before itself or right after itself
+    if (fromPage === insertBefore || fromPage === insertBefore - 1) return;
+    pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
+
+    const { PDFDocument } = PDFLib;
+    const srcDoc = await PDFDocument.load(originalPdfBytes.slice());
+    const newDoc = await PDFDocument.create();
+    const total = srcDoc.getPageCount();
+
+    const indices = Array.from({ length: total }, (_, i) => i);
+    const fromIdx = fromPage - 1;
+    indices.splice(fromIdx, 1);
+
+    let insertIdx = insertBefore > total
+        ? indices.length
+        : indices.indexOf(insertBefore - 1);
+    if (insertIdx === -1) insertIdx = indices.length;
+    indices.splice(insertIdx, 0, fromIdx);
+
+    const copied = await newDoc.copyPages(srcDoc, indices);
+    copied.forEach(p => newDoc.addPage(p));
+
+    originalPdfBytes = new Uint8Array(await newDoc.save());
+
+    const newAnnotations = {};
+    const newDimensions = {};
+    indices.forEach((oldIdx, newIdx) => {
+        if (pageAnnotations[oldIdx + 1]) newAnnotations[newIdx + 1] = pageAnnotations[oldIdx + 1];
+        if (pageDimensions[oldIdx + 1]) newDimensions[newIdx + 1] = pageDimensions[oldIdx + 1];
+    });
+    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+    Object.keys(pageDimensions).forEach(k => delete pageDimensions[k]);
+    Object.assign(pageAnnotations, newAnnotations);
+    Object.assign(pageDimensions, newDimensions);
+
+    pageNum = indices.indexOf(pageNum - 1) + 1;
+    pdfDoc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
+    document.querySelector('#page-count').textContent = pdfDoc.numPages;
+    await renderPage(pageNum);
+    const sidebar = document.getElementById('sidebar-thumbnails');
+    const savedScroll = sidebar.scrollTop;
+    await renderSidebar();
+    requestAnimationFrame(() => { sidebar.scrollTop = savedScroll; });
+};
+
 const initFabricCanvas = () => {
     if (fabricCanvas) return;
 
