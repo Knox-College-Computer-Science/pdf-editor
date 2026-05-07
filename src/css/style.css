@@ -424,6 +424,19 @@ body {
     color: #b1c5ff;
 }
 
+.sidebar-thumb.dragging {
+    opacity: 0.4;
+}
+
+.drop-indicator {
+    height: 3px;
+    background: #b1c5ff;
+    border-radius: 2px;
+    margin: 0 4px;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
 .main-content {
     flex: 1;
     overflow: auto;
