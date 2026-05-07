@@ -25,20 +25,119 @@
         }
     });
 })();
-// tbh i dont know what this truly does but ima leave it 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const defaultUrl = 'pdf.pdf';
+
+const showEditor = () => {
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('editor').classList.remove('hidden');
+};
+
+const showLanding = () => {
+    document.getElementById('editor').classList.add('hidden');
+    document.getElementById('landing').classList.remove('hidden');
+};
 
 let pdfDoc = null,
     pageNum = 1,
     pageIsRendering = false,
     pageNumIsPending = null;
 
-const scale = 1.5,
-    canvas = document.querySelector('#pdf-render'),
-    ctx = canvas.getContext('2d'),
-    fileInput = document.querySelector('#file-input'),
+const scale = 1.5;
+let canvas, ctx, fileInput, errorDiv;
+
+const initEditorElements = () => {
+    if (canvas) return;
+    canvas = document.querySelector('#pdf-render');
+    ctx = canvas.getContext('2d');
+    fileInput = document.querySelector('#file-input');
     errorDiv = document.querySelector('#file-error');
+
+    fileInput.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        const validationError = await validatePdfFile(file);
+        if (validationError) { showError(validationError); return; }
+        loadPdfDocument({ data: await file.arrayBuffer() });
+    });
+
+    document.getElementById('insert-pdf-input').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        const validationError = await validatePdfFile(file);
+        if (validationError) { showError(validationError); return; }
+        if (!originalPdfBytes) { showError('Please open a PDF first before inserting.'); return; }
+
+        const { PDFDocument } = PDFLib;
+        const [baseDoc, insertDoc] = await Promise.all([
+            PDFDocument.load(originalPdfBytes.slice()),
+            PDFDocument.load(await file.arrayBuffer()),
+        ]);
+        const copiedPages = await baseDoc.copyPages(insertDoc, insertDoc.getPageIndices());
+        copiedPages.forEach(page => baseDoc.addPage(page));
+        const mergedBytes = await baseDoc.save();
+        originalPdfBytes = new Uint8Array(mergedBytes);
+        Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+        const doc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
+        pdfDoc = doc;
+        document.querySelector('#page-count').textContent = pdfDoc.numPages;
+        renderPage(pageNum);
+        renderSidebar();
+    });
+
+    document.getElementById('delete-page-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes) return;
+        if (pdfDoc.numPages === 1) { alert('Cannot delete the only page.'); return; }
+        if (!confirm(`Delete page ${pageNum}?`)) return;
+        const { PDFDocument } = PDFLib;
+        const pdfLibDoc = await PDFDocument.load(originalPdfBytes.slice());
+        pdfLibDoc.removePage(pageNum - 1);
+        const savedBytes = await pdfLibDoc.save();
+        originalPdfBytes = new Uint8Array(savedBytes);
+        Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+        pageNum = Math.min(pageNum, pdfLibDoc.getPageCount());
+        const doc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
+        pdfDoc = doc;
+        document.querySelector('#page-count').textContent = pdfDoc.numPages;
+        renderPage(pageNum);
+        renderSidebar();
+    });
+
+    document.getElementById('download-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes) return;
+        pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
+        const { PDFDocument } = PDFLib;
+        const pdfLibDoc = await PDFDocument.load(originalPdfBytes.slice());
+        const pages = pdfLibDoc.getPages();
+        for (let i = 0; i < pages.length; i++) {
+            const pNum = i + 1;
+            const annotation = pageAnnotations[pNum];
+            if (!annotation || !annotation.objects || annotation.objects.length === 0) continue;
+            const dim = pageDimensions[pNum];
+            if (!dim) continue;
+            const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
+            await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
+            tempCanvas.renderAll();
+            const pngDataUrl = tempCanvas.toDataURL({ format: 'png' });
+            const base64 = pngDataUrl.split(',')[1];
+            const pngBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+            const pngImage = await pdfLibDoc.embedPng(pngBytes);
+            const page = pages[i];
+            const { width, height } = page.getSize();
+            page.drawImage(pngImage, { x: 0, y: 0, width, height });
+        }
+        const savedBytes = await pdfLibDoc.save();
+        const blob = new Blob([savedBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'edited.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.querySelector('#prev-page').addEventListener('click', showPrevPage);
+    document.querySelector('#next-page').addEventListener('click', showNextPage);
+};
 
 // Stores the raw bytes of the currently loaded PDF for download and editing
 let originalPdfBytes = null;
@@ -47,40 +146,45 @@ let originalPdfBytes = null;
 const pageAnnotations = {};
 const pageDimensions = {};
 
-// Initialize the fabric canvas for annotations
-const fabricCanvas = new fabric.Canvas('fabric-canvas', {
-    isDrawingMode: false,
-    selection: true,
-    backgroundColor: 'rgba(0,0,0,0)'
-});
-// Ensure eraser paths use destination-out so they cut through annotations
-fabricCanvas.on('path:created', function(e) {
-    if (currentTool === 'eraser') {
-        const path = e.path;
-        path.set({
-            globalCompositeOperation: 'destination-out',
-            selectable: false,
-            evented: false,
-            stroke: 'black',
-            fill: null
-        });
-        fabricCanvas.bringToFront(path);
-        fabricCanvas.renderAll();
-    }
-});
-// Initialize undo/redo stack defined in Undo.js
-if (typeof initUndo === 'function') {
-    initUndo(fabricCanvas);
-}
+// fabricCanvas and textLayerDiv are initialized after the editor is shown
+let fabricCanvas, textLayerDiv;
 
-// Position the fabric wrapper div directly over the PDF canvas
-const fabricWrapper = fabricCanvas.wrapperEl;
-fabricWrapper.style.position = 'absolute';
-fabricWrapper.style.top = '0';
-fabricWrapper.style.left = '0';
+const initFabricCanvas = () => {
+    if (fabricCanvas) return;
 
-// Text layer used for highlight mode
-const textLayerDiv = document.getElementById('text-layer');
+    fabricCanvas = new fabric.Canvas('fabric-canvas', {
+        isDrawingMode: false,
+        selection: true,
+        backgroundColor: 'rgba(0,0,0,0)'
+    });
+
+    fabricCanvas.on('path:created', function(e) {
+        if (currentTool === 'eraser') {
+            const path = e.path;
+            path.set({
+                globalCompositeOperation: 'destination-out',
+                selectable: false,
+                evented: false,
+                stroke: 'black',
+                fill: null
+            });
+            fabricCanvas.bringToFront(path);
+            fabricCanvas.renderAll();
+        }
+    });
+
+    if (typeof initUndo === 'function') initUndo(fabricCanvas);
+
+    const fabricWrapper = fabricCanvas.wrapperEl;
+    fabricWrapper.style.position = 'absolute';
+    fabricWrapper.style.top = '0';
+    fabricWrapper.style.left = '0';
+
+    textLayerDiv = document.getElementById('text-layer');
+
+    // Wire up Tool.js now that fabricCanvas exists
+    if (typeof initTools === 'function') initTools();
+};
 
 
 // The tool implementation has been moved to Tool.js for cleaner separation.
@@ -158,13 +262,11 @@ const showNextPage = () => {
 };
 
 const showError = message => {
-    errorDiv.textContent = message;
-    document.querySelector('.top-bar').style.display = 'none';
+    if (errorDiv) errorDiv.textContent = message;
 };
 
 const clearError = () => {
-    errorDiv.textContent = '';
-    document.querySelector('.top-bar').style.display = 'flex';
+    if (errorDiv) errorDiv.textContent = '';
 };
 
 const loadPdfDocument = async (source) => {
@@ -173,11 +275,11 @@ const loadPdfDocument = async (source) => {
         let docSource = source;
         if (typeof source === 'string') {
             const res = await fetch(source);
-            originalPdfBytes = await res.arrayBuffer();
-            docSource = { data: originalPdfBytes.slice(0) };
+            originalPdfBytes = new Uint8Array(await res.arrayBuffer());
+            docSource = { data: originalPdfBytes.slice() };
         } else if (source.data) {
-            originalPdfBytes = source.data;
-            docSource = { data: new Uint8Array(originalPdfBytes) };
+            originalPdfBytes = new Uint8Array(source.data);
+            docSource = { data: originalPdfBytes.slice() };
         }
 
         const doc = await pdfjsLib.getDocument(docSource).promise;
@@ -185,6 +287,9 @@ const loadPdfDocument = async (source) => {
         document.querySelector('#page-count').textContent = pdfDoc.numPages;
         pageNum = 1;
         Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+        showEditor();
+        initEditorElements();
+        initFabricCanvas();
         renderPage(pageNum);
         renderSidebar();
     } catch (err) {
@@ -192,77 +297,7 @@ const loadPdfDocument = async (source) => {
     }
 };
 
-// --- Delete page ---
-document.getElementById('delete-page-btn').addEventListener('click', async () => {
-    if (!originalPdfBytes) return;
-    if (pdfDoc.numPages === 1) {
-        alert('Cannot delete the only page.');
-        return;
-    }
-    if (!confirm(`Delete page ${pageNum}?`)) return;
-
-    const { PDFDocument } = PDFLib;
-    const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
-    pdfLibDoc.removePage(pageNum - 1);
-
-    const savedBytes = await pdfLibDoc.save();
-    originalPdfBytes = savedBytes.buffer;
-
-    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
-    pageNum = Math.min(pageNum, pdfLibDoc.getPageCount());
-
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(savedBytes) }).promise;
-    pdfDoc = doc;
-    document.querySelector('#page-count').textContent = pdfDoc.numPages;
-    renderPage(pageNum);
-    renderSidebar();
-});
-
-// --- Download ---
-document.getElementById('download-btn').addEventListener('click', async () => {
-    if (!originalPdfBytes) return;
-
-    // Save current page annotations before building the output PDF
-    pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
-
-    const { PDFDocument } = PDFLib;
-    const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
-    const pages = pdfLibDoc.getPages();
-
-    for (let i = 0; i < pages.length; i++) {
-        const pNum = i + 1;
-        const annotation = pageAnnotations[pNum];
-        if (!annotation || !annotation.objects || annotation.objects.length === 0) continue;
-
-        const dim = pageDimensions[pNum];
-        if (!dim) continue;
-
-        // Render annotations to a temporary StaticCanvas and export as PNG
-        const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
-        await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
-        tempCanvas.renderAll();
-
-        const pngDataUrl = tempCanvas.toDataURL({ format: 'png' });
-        const base64 = pngDataUrl.split(',')[1];
-        const pngBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-
-        const pngImage = await pdfLibDoc.embedPng(pngBytes);
-        const page = pages[i];
-        const { width, height } = page.getSize();
-        page.drawImage(pngImage, { x: 0, y: 0, width, height });
-    }
-
-    const savedBytes = await pdfLibDoc.save();
-    const blob = new Blob([savedBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'edited.pdf';
-    a.click();
-    URL.revokeObjectURL(url);
-});
-
-// --- File upload ---
+// --- File validation ---
 const validatePdfFile = async file => {
     if (!file) return 'Please select a PDF file.';
     if (file.type !== 'application/pdf') return 'Please select a PDF file.';
@@ -273,58 +308,35 @@ const validatePdfFile = async file => {
     return null;
 };
 
-fileInput.addEventListener('change', async e => {
+// Landing page file input
+document.getElementById('landing-file-input').addEventListener('change', async e => {
     const file = e.target.files[0];
-    const validationError = await validatePdfFile(file);
-    if (validationError) {
-        showError(validationError);
+    const err = await validatePdfFile(file);
+    if (err) {
+        document.getElementById('landing-error').textContent = err;
         return;
     }
-    const arrayBuffer = await file.arrayBuffer();
-    loadPdfDocument({ data: arrayBuffer });
+    document.getElementById('landing-error').textContent = '';
+    loadPdfDocument({ data: await file.arrayBuffer() });
 });
 
-// --- Insert PDF ---
-document.getElementById('insert-pdf-input').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-
-    const validationError = await validatePdfFile(file);
-    if (validationError) {
-        showError(validationError);
-        return;
-    }
-    if (!originalPdfBytes) {
-        showError('Please open a PDF first before inserting.');
-        return;
-    }
-
-    const { PDFDocument } = PDFLib;
-    const [baseDoc, insertDoc] = await Promise.all([
-        PDFDocument.load(originalPdfBytes),
-        PDFDocument.load(await file.arrayBuffer()),
-    ]);
-
-    const copiedPages = await baseDoc.copyPages(insertDoc, insertDoc.getPageIndices());
-    copiedPages.forEach(page => baseDoc.addPage(page));
-
-    const mergedBytes = await baseDoc.save();
-    originalPdfBytes = mergedBytes.buffer;
-
-    Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
-
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(mergedBytes) }).promise;
-    pdfDoc = doc;
-    document.querySelector('#page-count').textContent = pdfDoc.numPages;
-    renderPage(pageNum);
-    renderSidebar();
+// Drag and drop on landing dropzone
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropzone.classList.add('drag-over');
 });
-
-// Button events
-document.querySelector('#prev-page').addEventListener('click', showPrevPage);
-document.querySelector('#next-page').addEventListener('click', showNextPage);
-
-// Load the default PDF on startup
-loadPdfDocument(defaultUrl);
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', async e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    const err = await validatePdfFile(file);
+    if (err) {
+        document.getElementById('landing-error').textContent = err;
+        return;
+    }
+    document.getElementById('landing-error').textContent = '';
+    loadPdfDocument({ data: await file.arrayBuffer() });
+});
 

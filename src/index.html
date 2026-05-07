@@ -10,89 +10,113 @@
     <script src="JS/Tool.js"></script>
     <script src="JS/Undo.js"></script>
     <script src="JS/Sidebar.js"></script>
-    <title>PDF editor</title>
+    <title>PDFPro</title>
 </head>
 <body>
 
-<div class="top-bar">
-    <button class="btn" id="prev-page">
-        <i class="fas fa-arrow-circle-left"></i> Prev Page
-    </button>
-    <button class="btn" id="next-page">
-        Next Page <i class="fas fa-arrow-circle-right"></i>
-    </button>
-    <span class="page-info">
-        Page <span id="page-num"></span> of <span id="page-count"></span>
-    </span>
-</div>
-
-<div class="upload-bar">
-    <label for="file-input" class="file-label">Select a file to upload</label>
-    <input id="file-input" type="file" accept="application/pdf">
-    <label for="insert-pdf-input" class="file-label insert-label" id="insert-pdf-btn" title="Insert another PDF at the end of the current document">
-        <i class="fas fa-file-import"></i> Insert PDF
-    </label>
-    <input id="insert-pdf-input" type="file" accept="application/pdf">
-    <div id="file-error" class="error"></div>
-</div>
-
-<div class="tool-bar">
-    <button class="tool-btn active" id="tool-select" title="Select">
-        <i class="fas fa-mouse-pointer"></i> Select
-    </button>
-    <button class="tool-btn" id="tool-text" title="Add Text">
-        <i class="fas fa-font"></i> Text
-    </button>
-    <button class="tool-btn" id="tool-draw" title="Draw">
-        <i class="fas fa-pencil-alt"></i> Draw
-    </button>
-    <button class="tool-btn" id="tool-eraser" title="Eraser">
-        <i class="fas fa-eraser"></i> Eraser
-    </button>
-    <button class="tool-btn" id="tool-highlight" title="Highlight Text">
-        <i class="fas fa-highlighter"></i> Highlight
-    </button>
-    <input type="color" id="color-picker" value="#e74c3c" title="Color">
-    <input type="range" id="brush-size" min="1" max="20" value="3" title="Brush Size">
-    <div class="text-controls" id="text-controls">
-        <select id="font-family" title="Font">
-            <option value="Arial">Arial</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Trebuchet MS">Trebuchet MS</option>
-            <option value="Impact">Impact</option>
-        </select>
-        <input type="number" id="font-size" value="20" min="6" max="200" title="Font Size">
-        <span class="text-controls-label">px</span>
+<!-- Landing Screen -->
+<div id="landing">
+    <div class="landing-logo">PDFPro</div>
+    <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">
+            <i class="fas fa-file-upload"></i>
+        </div>
+        <h2>Drop your PDF here</h2>
+        <p>Drag and drop your document, or click to browse</p>
+        <label for="landing-file-input" class="dropzone-btn">
+            <i class="fas fa-plus"></i> Choose File
+        </label>
+        <span class="dropzone-hint">Supported format: PDF (Max 50MB)</span>
+        <input id="landing-file-input" type="file" accept="application/pdf">
     </div>
-    <button class="tool-btn" id="tool-delete" title="Delete Selected">
-        <i class="fas fa-trash"></i> Delete
-    </button>
-    <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
-        <i class="fas fa-file-times"></i> Delete Page
-    </button>
-    <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
-        <i class="fas fa-download"></i> Download
-    </button>
+    <div id="landing-error"></div>
 </div>
 
-<div class="content-area">
-    <div class="sidebar" id="sidebar">
-        <div id="sidebar-thumbnails"></div>
+<!-- Editor -->
+<div id="editor" class="hidden">
+    <div class="top-bar">
+        <span class="top-bar-logo">PDFPro</span>
+        <button class="btn" id="prev-page">
+            <i class="fas fa-arrow-left"></i> Prev
+        </button>
+        <button class="btn" id="next-page">
+            Next <i class="fas fa-arrow-right"></i>
+        </button>
+        <span class="page-info">
+            Page <span id="page-num"></span> of <span id="page-count"></span>
+        </span>
     </div>
-    <div class="main-content">
-        <div class="canvas-wrapper">
-            <canvas id="pdf-render"></canvas>
-            <div id="text-layer"></div>
-            <canvas id="fabric-canvas"></canvas>
+
+    <div class="upload-bar">
+        <label for="file-input" class="file-label">
+            <i class="fas fa-folder-open"></i> Open PDF
+        </label>
+        <input id="file-input" type="file" accept="application/pdf">
+        <label for="insert-pdf-input" class="insert-label">
+            <i class="fas fa-file-import"></i> Insert PDF
+        </label>
+        <input id="insert-pdf-input" type="file" accept="application/pdf">
+        <div id="file-error" class="error"></div>
+    </div>
+
+    <div class="tool-bar">
+        <button class="tool-btn active" id="tool-select" title="Select">
+            <i class="fas fa-mouse-pointer"></i> Select
+        </button>
+        <button class="tool-btn" id="tool-text" title="Add Text">
+            <i class="fas fa-font"></i> Text
+        </button>
+        <button class="tool-btn" id="tool-draw" title="Draw">
+            <i class="fas fa-pencil-alt"></i> Draw
+        </button>
+        <button class="tool-btn" id="tool-eraser" title="Eraser">
+            <i class="fas fa-eraser"></i> Eraser
+        </button>
+        <button class="tool-btn" id="tool-highlight" title="Highlight Text">
+            <i class="fas fa-highlighter"></i> Highlight
+        </button>
+        <input type="color" id="color-picker" value="#e74c3c" title="Color">
+        <input type="range" id="brush-size" min="1" max="20" value="3" title="Brush Size">
+        <div class="text-controls" id="text-controls">
+            <select id="font-family" title="Font">
+                <option value="Arial">Arial</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Trebuchet MS">Trebuchet MS</option>
+                <option value="Impact">Impact</option>
+            </select>
+            <input type="number" id="font-size" value="20" min="6" max="200" title="Font Size">
+            <span class="text-controls-label">px</span>
+        </div>
+        <button class="tool-btn" id="tool-delete" title="Delete Selected">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+        <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
+            <i class="fas fa-file-excel"></i> Delete Page
+        </button>
+        <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
+            <i class="fas fa-download"></i> Download
+        </button>
+    </div>
+
+    <div class="content-area">
+        <div class="sidebar" id="sidebar">
+            <div id="sidebar-thumbnails"></div>
+        </div>
+        <div class="main-content">
+            <div class="canvas-wrapper">
+                <canvas id="pdf-render"></canvas>
+                <div id="text-layer"></div>
+                <canvas id="fabric-canvas"></canvas>
+            </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <script src="JS/pdfview.js"></script>
 </body>
 </html>
