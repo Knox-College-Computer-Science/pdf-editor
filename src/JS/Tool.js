@@ -27,7 +27,7 @@ const setTool = (tool) => {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush = new fabric.EraserBrush(fabricCanvas);
         fabricCanvas.freeDrawingBrush.width = size || 30;
-        fabricCanvas.freeDrawingBrush.color = 'rgba(0,0,0,0)';
+        fabricCanvas.freeDrawingBrush.color = 'rgb(112, 110, 110)';
     } else if (tool === 'draw') {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
