@@ -1,12 +1,30 @@
 // --- Sidebar ---
 const THUMB_SCALE = 0.25;
 
+let selectedPages = new Set();
+let lastClickedPage = null;
+
 const updateSidebarActive = () => {
     document.querySelectorAll('.sidebar-thumb').forEach(el => {
         el.classList.toggle('active', parseInt(el.dataset.page) === pageNum);
     });
     const active = document.querySelector('.sidebar-thumb.active');
     if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+};
+
+const updateSelectedState = () => {
+    document.querySelectorAll('.sidebar-thumb').forEach(el => {
+        el.classList.toggle('selected', selectedPages.has(parseInt(el.dataset.page)));
+    });
+    const bar = document.getElementById('sidebar-extract-bar');
+    if (!bar) return;
+    if (selectedPages.size > 0) {
+        bar.classList.remove('hidden');
+        bar.querySelector('.extract-count').textContent =
+            `${selectedPages.size} page${selectedPages.size > 1 ? 's' : ''} selected`;
+    } else {
+        bar.classList.add('hidden');
+    }
 };
 
 let dragSrcPage = null;
@@ -43,7 +61,7 @@ const renderSidebar = async () => {
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
         const wrapper = document.createElement('div');
-        wrapper.className = 'sidebar-thumb' + (i === pageNum ? ' active' : '');
+        wrapper.className = 'sidebar-thumb' + (i === pageNum ? ' active' : '') + (selectedPages.has(i) ? ' selected' : '');
         wrapper.dataset.page = i;
         wrapper.draggable = true;
 
@@ -55,7 +73,31 @@ const renderSidebar = async () => {
 
         wrapper.appendChild(img);
         wrapper.appendChild(label);
-        wrapper.addEventListener('click', () => goToPage(parseInt(wrapper.dataset.page)));
+        wrapper.addEventListener('click', e => {
+            const clickedPage = parseInt(wrapper.dataset.page);
+            if (e.shiftKey) {
+                e.preventDefault();
+                const anchor = lastClickedPage !== null ? lastClickedPage : clickedPage;
+                const min = Math.min(anchor, clickedPage);
+                const max = Math.max(anchor, clickedPage);
+                for (let p = min; p <= max; p++) selectedPages.add(p);
+                updateSelectedState();
+            } else if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (selectedPages.has(clickedPage)) {
+                    selectedPages.delete(clickedPage);
+                } else {
+                    selectedPages.add(clickedPage);
+                }
+                lastClickedPage = clickedPage;
+                updateSelectedState();
+            } else {
+                selectedPages.clear();
+                lastClickedPage = clickedPage;
+                updateSelectedState();
+                goToPage(clickedPage);
+            }
+        });
 
         wrapper.addEventListener('dragstart', e => {
             dragSrcPage = parseInt(wrapper.dataset.page);

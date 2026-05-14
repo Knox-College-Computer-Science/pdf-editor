@@ -45,6 +45,32 @@ let pdfDoc = null,
 const scale = 1.5;
 let canvas, ctx, fileInput, errorDiv;
 
+const savePdfBlob = async (blob, defaultName) => {
+    if (window.showSaveFilePicker) {
+        try {
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: defaultName,
+                types: [{ description: 'PDF ファイル', accept: { 'application/pdf': ['.pdf'] } }]
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+        } catch (err) {
+            if (err.name !== 'AbortError') throw err;
+        }
+    } else {
+        let filename = prompt('ファイル名を入力してください:', defaultName);
+        if (filename === null) return;
+        if (!filename.toLowerCase().endsWith('.pdf')) filename += '.pdf';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+};
+
 const initEditorElements = () => {
     if (canvas) return;
     canvas = document.querySelector('#pdf-render');
@@ -98,8 +124,48 @@ const initEditorElements = () => {
         const doc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
         pdfDoc = doc;
         document.querySelector('#page-count').textContent = pdfDoc.numPages;
+        selectedPages.clear();
+        updateSelectedState();
         renderPage(pageNum);
         renderSidebar();
+    });
+
+    document.getElementById('extract-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes || selectedPages.size === 0) return;
+        pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
+
+        const pagesToExtract = Array.from(selectedPages).sort((a, b) => a - b);
+        const { PDFDocument } = PDFLib;
+        const srcDoc = await PDFDocument.load(originalPdfBytes.slice());
+        const newDoc = await PDFDocument.create();
+        const indices = pagesToExtract.map(p => p - 1);
+        const copied = await newDoc.copyPages(srcDoc, indices);
+        copied.forEach(p => newDoc.addPage(p));
+
+        const newPages = newDoc.getPages();
+        for (let i = 0; i < pagesToExtract.length; i++) {
+            const pNum = pagesToExtract[i];
+            const annotation = pageAnnotations[pNum];
+            if (!annotation || !annotation.objects || annotation.objects.length === 0) continue;
+            const dim = pageDimensions[pNum];
+            if (!dim) continue;
+            const tempCanvas = new fabric.StaticCanvas(null, { width: dim.width, height: dim.height });
+            await new Promise(resolve => tempCanvas.loadFromJSON(annotation, resolve));
+            tempCanvas.renderAll();
+            const pngDataUrl = tempCanvas.toDataURL({ format: 'png' });
+            const base64 = pngDataUrl.split(',')[1];
+            const pngBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+            const pngImage = await newDoc.embedPng(pngBytes);
+            const page = newPages[i];
+            const { width, height } = page.getSize();
+            page.drawImage(pngImage, { x: 0, y: 0, width, height });
+        }
+
+        const savedBytes = await newDoc.save();
+        await savePdfBlob(new Blob([savedBytes], { type: 'application/pdf' }), 'extracted.pdf');
+
+        selectedPages.clear();
+        updateSelectedState();
     });
 
     document.getElementById('download-btn').addEventListener('click', async () => {
@@ -126,27 +192,7 @@ const initEditorElements = () => {
             page.drawImage(pngImage, { x: 0, y: 0, width, height });
         }
         const savedBytes = await pdfLibDoc.save();
-        const blob = new Blob([savedBytes], { type: 'application/pdf' });
-        if (window.showSaveFilePicker) {
-            try {
-                const fileHandle = await window.showSaveFilePicker({
-                    suggestedName: 'edited.pdf',
-                    types: [{ description: 'PDF ファイル', accept: { 'application/pdf': ['.pdf'] } }]
-                });
-                const writable = await fileHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-            } catch (err) {
-                if (err.name !== 'AbortError') throw err;
-            }
-        } else {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'edited.pdf';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+        await savePdfBlob(new Blob([savedBytes], { type: 'application/pdf' }), 'edited.pdf');
     });
 
     document.querySelector('#prev-page').addEventListener('click', showPrevPage);
@@ -205,6 +251,8 @@ const reorderPages = async (fromPage, insertBefore) => {
     pageNum = indices.indexOf(pageNum - 1) + 1;
     pdfDoc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
     document.querySelector('#page-count').textContent = pdfDoc.numPages;
+    selectedPages.clear();
+    updateSelectedState();
     await renderPage(pageNum);
     const sidebar = document.getElementById('sidebar-thumbnails');
     const savedScroll = sidebar.scrollTop;
@@ -350,6 +398,8 @@ const loadPdfDocument = async (source) => {
         document.querySelector('#page-count').textContent = pdfDoc.numPages;
         pageNum = 1;
         Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+        selectedPages.clear();
+        lastClickedPage = null;
         showEditor();
         initEditorElements();
         initFabricCanvas();
