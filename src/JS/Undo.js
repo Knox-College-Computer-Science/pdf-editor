@@ -1,10 +1,24 @@
 // Undo helper for fabricCanvas.
+// Redo is also in this File because im lazy and did not want to make a new one for it 
 window.initUndo = function(fabricCanvas) {
     const undoStack = [];
+    const redoStack = [];
+    let isRestoring = false;
 
     const saveHistory = () => {
+        if (isRestoring) return;
         undoStack.push(JSON.stringify(fabricCanvas.toJSON()));
         if (undoStack.length > 50) undoStack.shift();
+        redoStack.length = 0;
+    };
+
+    const restoreState = (state) => {
+        if (!state) return;
+        isRestoring = true;
+        fabricCanvas.loadFromJSON(state, () => {
+            fabricCanvas.renderAll();
+            isRestoring = false;
+        });
     };
 
     fabricCanvas.on('object:added', saveHistory);
@@ -12,16 +26,33 @@ window.initUndo = function(fabricCanvas) {
     fabricCanvas.on('object:removed', saveHistory);
 
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        const key = e.key.toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && key === 'z') {
             e.preventDefault();
             if (undoStack.length <= 1) {
+                const current = undoStack.pop();
+                if (current) redoStack.push(current);
                 fabricCanvas.clear();
                 undoStack.length = 0;
                 return;
             }
-            undoStack.pop();
+            const current = undoStack.pop();
+            redoStack.push(current);
             const prev = undoStack[undoStack.length - 1];
-            fabricCanvas.loadFromJSON(prev, () => fabricCanvas.renderAll());
+            restoreState(prev);
+        } 
+        else if (e.ctrlKey || e.metaKey || key === 'x') {
+            const target = e.target;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable) {
+                return;
+            }
+            if (redoStack.length === 0) return;
+            e.preventDefault();
+            const next = redoStack.pop();
+            if (next) {
+                undoStack.push(next);
+                restoreState(next);
+            }
         }
     });
 };
