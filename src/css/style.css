@@ -312,6 +312,16 @@ body {
     background: var(--secondary-hover);
 }
 
+.print-btn {
+    background: rgba(255,255,255,0.08);
+    color: #e0e4f0;
+    font-weight: 500;
+}
+
+.print-btn:hover {
+    background: rgba(255,255,255,0.15);
+}
+
 #color-picker {
     width: 32px;
     height: 30px;
