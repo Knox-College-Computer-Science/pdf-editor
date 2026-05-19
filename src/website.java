@@ -78,6 +78,10 @@ public class website {
                 sendStaticFile(exchange, Paths.get("src/JS/rendering.js"), "application/javascript");
                 return;
             }
+            if ("/JS/Search.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Search.js"), "application/javascript");
+                return;
+            }
 
             sendStaticFile(exchange, Paths.get("src/index.html"), "text/html");
         }
@@ -112,8 +116,9 @@ public class website {
                 jsFile = Paths.get("src/JS/Button.js");
             } else if ("/rendering.js".equals(requestPath) || "/JS/rendering.js".equals(requestPath)) {
                 jsFile = Paths.get("src/JS/rendering.js");
-            }
-            else {
+            } else if ("/Search.js".equals(requestPath) || "/JS/Search.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Search.js");
+            } else {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
