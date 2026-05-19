@@ -111,7 +111,7 @@ const updateSearchCounter = () => {
     counter.textContent = !activeSearchTerm.trim()
         ? ''
         : searchMatches.length === 0
-            ? '0件'
+            ? 'No results'
             : `${currentMatchIdx + 1} / ${searchMatches.length}`;
     counter.classList.toggle('no-results', noMatch);
 };
