@@ -13,6 +13,7 @@
     <script src="JS/Button.js"></script>
     <script src="JS/rendering.js"></script>
     <script src="JS/Search.js"></script>
+    <script src="JS/Signature.js"></script>
     <title>PDFPro</title>
 </head>
 <body>
@@ -96,6 +97,9 @@
         <button class="tool-btn" id="tool-search" title="Search (Ctrl+F)">
             <i class="fas fa-search"></i> Search
         </button>
+        <button class="tool-btn" id="tool-signature" title="Add Signature">
+            <i class="fas fa-signature"></i> Signature
+        </button>
         <button class="tool-btn" id="tool-delete" title="Delete Selected">
             <i class="fas fa-trash"></i> Delete
         </button>
@@ -123,6 +127,22 @@
         <button id="search-close" class="search-close-btn" title="閉じる (Esc)">
             <i class="fas fa-times"></i>
         </button>
+    </div>
+
+    <!-- Signature Modal -->
+    <div id="signature-modal" class="signature-modal hidden">
+        <div class="signature-modal-box">
+            <div class="signature-modal-header">
+                <span>Add Signature</span>
+                <button id="signature-close-btn" class="signature-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="signature-name-input" class="signature-input" placeholder="Enter your name...">
+            <div class="signature-preview-label">Preview</div>
+            <div id="signature-preview" class="signature-preview">Your Name</div>
+            <button id="signature-add-btn" class="signature-add-btn">
+                <i class="fas fa-signature"></i> Add to PDF
+            </button>
+        </div>
     </div>
 
     <div class="content-area">
