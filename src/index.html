@@ -13,6 +13,7 @@
     <script src="JS/Button.js"></script>
     <script src="JS/rendering.js"></script>
     <script src="JS/Search.js"></script>
+    <script src="JS/Signature.js"></script>
     <title>PDFPro</title>
 </head>
 <body>
@@ -96,6 +97,9 @@
         <button class="tool-btn" id="tool-search" title="Search (Ctrl+F)">
             <i class="fas fa-search"></i> Search
         </button>
+        <button class="tool-btn" id="tool-signature" title="Add Signature">
+            <i class="fas fa-signature"></i> Signature
+        </button>
         <button class="tool-btn" id="tool-delete" title="Delete Selected">
             <i class="fas fa-trash"></i> Delete
         </button>
@@ -105,11 +109,14 @@
         <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
             <i class="fas fa-download"></i> Download
         </button>
+        <button class="tool-btn print-btn" id="print-btn" title="Print PDF">
+            <i class="fas fa-print"></i> Print
+        </button>
     </div>
 
     <div id="search-bar" class="search-bar hidden">
         <i class="fas fa-search search-bar-icon"></i>
-        <input type="text" id="search-input" placeholder="検索..." autocomplete="off" spellcheck="false">
+        <input type="text" id="search-input" placeholder="Search..." autocomplete="off" spellcheck="false">
         <span id="search-counter" class="search-counter"></span>
         <button id="search-prev" class="search-nav-btn" title="前の結果 (Shift+Enter)">
             <i class="fas fa-chevron-up"></i>
@@ -120,6 +127,22 @@
         <button id="search-close" class="search-close-btn" title="閉じる (Esc)">
             <i class="fas fa-times"></i>
         </button>
+    </div>
+
+    <!-- Signature Modal -->
+    <div id="signature-modal" class="signature-modal hidden">
+        <div class="signature-modal-box">
+            <div class="signature-modal-header">
+                <span>Add Signature</span>
+                <button id="signature-close-btn" class="signature-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="signature-name-input" class="signature-input" placeholder="Enter your name...">
+            <div class="signature-preview-label">Preview</div>
+            <div id="signature-preview" class="signature-preview">Your Name</div>
+            <button id="signature-add-btn" class="signature-add-btn">
+                <i class="fas fa-signature"></i> Add to PDF
+            </button>
+        </div>
     </div>
 
     <div class="content-area">
