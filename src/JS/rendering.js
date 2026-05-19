@@ -27,6 +27,8 @@ const renderPage = num => {
             if (pageNumIsPending !== null) {
                 renderPage(pageNumIsPending);
                 pageNumIsPending = null;
+            } else if (typeof onPageRenderComplete === 'function') {
+                onPageRenderComplete(num);
             }
         });
 

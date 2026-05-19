@@ -12,6 +12,7 @@
     <script src="JS/Sidebar.js"></script>
     <script src="JS/Button.js"></script>
     <script src="JS/rendering.js"></script>
+    <script src="JS/Search.js"></script>
     <title>PDFPro</title>
 </head>
 <body>
@@ -92,6 +93,9 @@
             <input type="number" id="font-size" value="20" min="6" max="200" title="Font Size">
             <span class="text-controls-label">px</span>
         </div>
+        <button class="tool-btn" id="tool-search" title="Search (Ctrl+F)">
+            <i class="fas fa-search"></i> Search
+        </button>
         <button class="tool-btn" id="tool-delete" title="Delete Selected">
             <i class="fas fa-trash"></i> Delete
         </button>
@@ -100,6 +104,21 @@
         </button>
         <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
             <i class="fas fa-download"></i> Download
+        </button>
+    </div>
+
+    <div id="search-bar" class="search-bar hidden">
+        <i class="fas fa-search search-bar-icon"></i>
+        <input type="text" id="search-input" placeholder="検索..." autocomplete="off" spellcheck="false">
+        <span id="search-counter" class="search-counter"></span>
+        <button id="search-prev" class="search-nav-btn" title="前の結果 (Shift+Enter)">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="search-next" class="search-nav-btn" title="次の結果 (Enter)">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+        <button id="search-close" class="search-close-btn" title="閉じる (Esc)">
+            <i class="fas fa-times"></i>
         </button>
     </div>
 

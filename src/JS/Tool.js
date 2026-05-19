@@ -198,6 +198,7 @@ const initTools = () => {
     document.querySelector('#tool-draw').addEventListener('click', () => setTool('draw'));
     document.querySelector('#tool-eraser').addEventListener('click', () => setTool('eraser'));
     document.querySelector('#tool-highlight').addEventListener('click', () => setTool('highlight'));
+    document.querySelector('#tool-search').addEventListener('click', openSearchBar);
     document.querySelector('#tool-delete').addEventListener('click', deleteSelection);
     document.querySelector('#color-picker').addEventListener('input', handleColorChange);
     document.querySelector('#brush-size').addEventListener('input', handleBrushSizeChange);

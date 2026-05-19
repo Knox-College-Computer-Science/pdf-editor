@@ -30,6 +30,7 @@ const initEditorElements = () => {
         const mergedBytes = await baseDoc.save();
         originalPdfBytes = new Uint8Array(mergedBytes);
         Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
+        clearPageTextCache();
         const doc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice() }).promise;
         pdfDoc = doc;
         document.querySelector('#page-count').textContent = pdfDoc.numPages;
@@ -53,6 +54,7 @@ const initEditorElements = () => {
         document.querySelector('#page-count').textContent = pdfDoc.numPages;
         selectedPages.clear();
         updateSelectedState();
+        clearPageTextCache();
         renderPage(pageNum);
         renderSidebar();
     });

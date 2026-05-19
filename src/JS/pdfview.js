@@ -124,6 +124,7 @@ const reorderPages = async (fromPage, insertBefore) => {
     document.querySelector('#page-count').textContent = pdfDoc.numPages;
     selectedPages.clear();
     updateSelectedState();
+    clearPageTextCache();
     await renderPage(pageNum);
     const sidebar = document.getElementById('sidebar-thumbnails');
     const savedScroll = sidebar.scrollTop;
@@ -197,6 +198,7 @@ const loadPdfDocument = async (source) => {
         Object.keys(pageAnnotations).forEach(k => delete pageAnnotations[k]);
         selectedPages.clear();
         lastClickedPage = null;
+        clearPageTextCache();
         showEditor();
         initEditorElements();
         initFabricCanvas();
