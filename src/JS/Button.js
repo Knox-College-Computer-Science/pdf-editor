@@ -97,8 +97,7 @@ const initEditorElements = () => {
         updateSelectedState();
     });
 
-    document.getElementById('download-btn').addEventListener('click', async () => {
-        if (!originalPdfBytes) return;
+    const buildAnnotatedPdf = async () => {
         pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
         const { PDFDocument } = PDFLib;
         const pdfLibDoc = await PDFDocument.load(originalPdfBytes.slice());
@@ -120,8 +119,20 @@ const initEditorElements = () => {
             const { width, height } = page.getSize();
             page.drawImage(pngImage, { x: 0, y: 0, width, height });
         }
-        const savedBytes = await pdfLibDoc.save();
-        await savePdfBlob(new Blob([savedBytes], { type: 'application/pdf' }), 'edited.pdf');
+        return new Blob([await pdfLibDoc.save()], { type: 'application/pdf' });
+    };
+
+    document.getElementById('download-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes) return;
+        await savePdfBlob(await buildAnnotatedPdf(), 'edited.pdf');
+    });
+
+    document.getElementById('print-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes) return;
+        const url = URL.createObjectURL(await buildAnnotatedPdf());
+        const win = window.open(url, '_blank');
+        win.onload = () => { win.print(); };
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
     });
 
     document.querySelector('#prev-page').addEventListener('click', showPrevPage);
