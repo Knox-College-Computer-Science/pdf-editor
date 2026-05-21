@@ -25,6 +25,7 @@
         }
     });
 })();
+//i think this line is important but tbh i got no clue
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const showEditor = () => {
@@ -155,6 +156,38 @@ const initFabricCanvas = () => {
             fabricCanvas.renderAll();
         }
     });
+
+    let isErasing = false;
+
+// 1. Delete an object immediately on click down
+fabricCanvas.on('mouse:down', function(options) {
+    if (currentTool === 'delete') {
+        isErasing = true;
+        if (options.target) {
+            fabricCanvas.remove(options.target);
+            fabricCanvas.renderAll();
+        }
+    }
+});
+
+// 2. Delete objects continuously as the mouse drags across them
+fabricCanvas.on('mouse:move', function(options) {
+    if (isErasing && currentTool === 'delete') {
+        if (options.target) {
+            fabricCanvas.remove(options.target);
+            fabricCanvas.renderAll();
+        }
+    }
+});
+
+// 3. Stop erasing when mouse button is released
+fabricCanvas.on('mouse:up', function() {
+    if (currentTool === 'delete' && isErasing) {
+        isErasing = false;
+        saveHistory(); // Auto-saves to your undo stack!
+    }
+});
+
 
     if (typeof initUndo === 'function') initUndo(fabricCanvas);
 

@@ -36,10 +36,16 @@ const setTool = (tool) => {
     } else if (tool === 'highlight') {
         fabricCanvas.isDrawingMode = false;
         fabricCanvas.selection = false;
-        document.getElementById('color-picker').value = '#ffff00';
+        document.getElementById('color-picker').value = color;
         textLayerDiv.classList.add('highlight-active');
         ensureTextLayer();
-    } else {
+    } else if (tool === 'delete') {
+        currentTool = 'delete';             // Track the active tool globally
+    fabricCanvas.isDrawingMode = false; // Turn off path drawing
+    fabricCanvas.selection = false;     // Turn off the blue selection box
+    fabricCanvas.defaultCursor = 'pointer'; // Make cursor look like a selection link
+    }
+    else {
         fabricCanvas.isDrawingMode = false;
     }
 };
@@ -80,9 +86,59 @@ const hexToRgba = (hex, alpha) => {
     return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const updateColorHotbar = (color) => {
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === color);
+    });
+};
+
+const applyColor = (color) => {
+    const picker = document.getElementById('color-picker');
+    if (!picker) return;
+    picker.value = color;
+    updateColorHotbar(color);
+    handleColorChange({ target: picker });
+};
+
+// Check whether two rectangles overlap or touch.
 const rectsOverlap = (a, b) =>
     !(b.x > a.x + a.width || b.x + b.width < a.x ||
       b.y > a.y + a.height || b.y + b.height < a.y);
+
+// Merge adjacent or overlapping highlight rectangles into larger unified boxes.
+// This reduces duplicate / stacked highlights when text selection spans multiple
+// PDF text spans that are rendered as separate DOM rects.
+const mergeRectangles = (rects) => {
+    if (rects.length === 0) return [];
+
+    const sorted = rects.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+    const merged = [Object.assign({}, sorted[0])];
+
+    for (let i = 1; i < sorted.length; i++) {
+        const rect = sorted[i];
+        const last = merged[merged.length - 1];
+
+        // Allow a small gap tolerance so adjacent text boxes on the same line
+        // are merged instead of generating separate highlight rectangles.
+        const overlapY = rect.y <= last.y + last.height + 2;
+        const overlapX = rect.x <= last.x + last.width + 2 && last.x <= rect.x + rect.width + 2;
+
+        if (overlapY && overlapX) {
+            const x1 = Math.min(last.x, rect.x);
+            const y1 = Math.min(last.y, rect.y);
+            const x2 = Math.max(last.x + last.width, rect.x + rect.width);
+            const y2 = Math.max(last.y + last.height, rect.y + rect.height);
+            last.x = x1;
+            last.y = y1;
+            last.width = x2 - x1;
+            last.height = y2 - y1;
+        } else {
+            merged.push(Object.assign({}, rect));
+        }
+    }
+
+    return merged;
+};
 
 const handlePathCreated = (e) => {
     if (currentTool !== 'eraser') return;
@@ -112,6 +168,7 @@ const handleCanvasMouseDown = (e) => {
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
     text.enterEditing();
+    text.selectAll(); // Select the placeholder so typing replaces it immediately
     setTool('select');
 };
 
@@ -162,11 +219,14 @@ const handleTextLayerHighlight = () => {
 
     if (selRects.length === 0) return;
 
+    const mergedRects = mergeRectangles(selRects);
+    if (mergedRects.length === 0) return;
+
     const existing = fabricCanvas.getObjects().filter(
         obj => obj.data && obj.data.type === 'highlight'
     );
     const toRemove = existing.filter(obj =>
-        selRects.some(sr => rectsOverlap(sr, {
+        mergedRects.some(sr => rectsOverlap(sr, {
             x: obj.left, y: obj.top, width: obj.width, height: obj.height,
         }))
     );
@@ -174,7 +234,7 @@ const handleTextLayerHighlight = () => {
     if (toRemove.length > 0) {
         toRemove.forEach(obj => fabricCanvas.remove(obj));
     } else {
-        selRects.forEach(sr => {
+        mergedRects.forEach(sr => {
             fabricCanvas.add(new fabric.Rect({
                 left: sr.x,
                 top: sr.y,
@@ -198,9 +258,27 @@ const initTools = () => {
     document.querySelector('#tool-draw').addEventListener('click', () => setTool('draw'));
     document.querySelector('#tool-eraser').addEventListener('click', () => setTool('eraser'));
     document.querySelector('#tool-highlight').addEventListener('click', () => setTool('highlight'));
+    document.querySelector('#tool-delete').addEventListener('click', () => setTool('delete'));
     document.querySelector('#tool-search').addEventListener('click', openSearchBar);
-    document.querySelector('#tool-delete').addEventListener('click', deleteSelection);
     document.querySelector('#color-picker').addEventListener('input', handleColorChange);
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const currentColor = document.getElementById('color-picker').value;
+            if (btn.dataset.color) {
+                applyColor(btn.dataset.color);
+            } else {
+                btn.dataset.color = currentColor;
+                btn.style.background = currentColor;
+                btn.classList.remove('assignable');
+                btn.title = `Saved ${currentColor}`;
+                applyColor(currentColor);
+            }
+        });
+    });
+    document.querySelector('#color-picker').addEventListener('input', (event) => {
+        handleColorChange(event);
+        updateColorHotbar(event.target.value);
+    });
     document.querySelector('#brush-size').addEventListener('input', handleBrushSizeChange);
 
     fabricCanvas.on('path:created', handlePathCreated);

@@ -322,6 +322,41 @@ body {
     background: rgba(255,255,255,0.1);
 }
 
+.color-hotbar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.color-swatch.assignable {
+    background: transparent;
+    border-color: rgba(255,255,255,0.35);
+}
+
+.color-swatch.assignable:hover {
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.8);
+}
+
+.color-swatch:hover {
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.color-swatch.active {
+    border-color: #ffffff;
+}
+
 #brush-size {
     width: 72px;
     cursor: pointer;
