@@ -7,7 +7,7 @@ const getTextProps = () => ({
     fontSize: parseInt(document.getElementById('font-size').value) || 20,
     fill: document.getElementById('color-picker').value,
 });
-
+//tool 
 const setTool = (tool) => {
     currentTool = tool;
     updateToolButtons();
