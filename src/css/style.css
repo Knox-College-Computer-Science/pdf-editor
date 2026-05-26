@@ -470,6 +470,16 @@ body {
     cursor: pointer;
 }
 
+#font-family optgroup[data-pdf-group] {
+    color: #aac4ff;
+    font-style: italic;
+}
+
+#font-family option[data-pdf-font] {
+    color: #e0e4f0;
+    font-style: normal;
+}
+
 #font-size {
     width: 50px;
     background: rgba(255,255,255,0.1);
@@ -732,9 +742,15 @@ mark.search-highlight.current {
     forced-color-adjust: none;
 }
 
-#text-layer.highlight-active {
+#text-layer.highlight-active,
+#text-layer.style-pick-active {
     pointer-events: auto;
-    z-index: 5;
+    z-index: 10;
+}
+
+#text-layer.style-pick-active ::selection {
+    background: rgba(255, 140, 0, 0.35);
+    color: transparent;
 }
 
 #text-layer span {
