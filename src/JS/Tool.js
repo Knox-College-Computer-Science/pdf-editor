@@ -7,7 +7,7 @@ const getTextProps = () => ({
     fontSize: parseInt(document.getElementById('font-size').value) || 20,
     fill: document.getElementById('color-picker').value,
 });
-//tool 
+//the buttons that make up the tool bar
 const setTool = (tool) => {
     currentTool = tool;
     updateToolButtons();
@@ -53,7 +53,7 @@ const setTool = (tool) => {
 const updateToolButtons = () => {
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b.id === `tool-${currentTool}`));
 };
-
+// not being used anymore, but keeping it in case we want to use it again
 const deleteSelection = () => {
     const active = fabricCanvas.getActiveObjects();
     active.forEach(obj => fabricCanvas.remove(obj));
@@ -85,7 +85,7 @@ const hexToRgba = (hex, alpha) => {
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
 };
-
+// makes the empty buttons into a color
 const updateColorHotbar = (color) => {
     document.querySelectorAll('.color-swatch').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.color === color);
@@ -120,8 +120,9 @@ const mergeRectangles = (rects) => {
 
         // Allow a small gap tolerance so adjacent text boxes on the same line
         // are merged instead of generating separate highlight rectangles.
-        const overlapY = rect.y <= last.y + last.height + 2;
-        const overlapX = rect.x <= last.x + last.width + 2 && last.x <= rect.x + rect.width + 2;
+        // switched the number 2 to a zero to make the highlight tool more precise and not highlight extra space
+        const overlapY = rect.y <= last.y + last.height ;
+        const overlapX = rect.x <= last.x + last.width  && last.x <= rect.x + rect.width ;
 
         if (overlapY && overlapX) {
             const x1 = Math.min(last.x, rect.x);
@@ -195,7 +196,7 @@ const syncFontControls = (e) => {
         document.getElementById('font-size').value = obj.fontSize || 20;
     }
 };
-
+// this is what makes the highlight tool work, it checks if the highlight tool is selected and then gets the selection and creates a rectangle around it
 const handleTextLayerHighlight = () => {
     if (currentTool !== 'highlight') return;
     const selection = window.getSelection();
@@ -250,7 +251,7 @@ const handleTextLayerHighlight = () => {
 
     fabricCanvas.renderAll();
 };
-
+//without initializing the tools, the tool bar will not work and the user will not be able to select any of the tools
 const initTools = () => {
     updateToolButtons();
     document.querySelector('#tool-select').addEventListener('click', () => setTool('select'));
@@ -273,6 +274,15 @@ const initTools = () => {
                 btn.title = `Saved ${currentColor}`;
                 applyColor(currentColor);
             }
+        });
+        // Right-click to reset/clear the saved color
+        btn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            delete btn.dataset.color;
+            btn.style.background = '';
+            btn.classList.add('assignable');
+            btn.title = 'Click to save current color';
+            updateColorHotbar(document.getElementById('color-picker').value);
         });
     });
     document.querySelector('#color-picker').addEventListener('input', (event) => {

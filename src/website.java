@@ -122,6 +122,8 @@ public class website {
                 jsFile = Paths.get("src/JS/rendering.js");
             } else if ("/Search.js".equals(requestPath) || "/JS/Search.js".equals(requestPath)) {
                 jsFile = Paths.get("src/JS/Search.js");
+            } else if ("/Signature.js".equals(requestPath) || "/JS/Signature.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Signature.js");
             } else {
                 exchange.sendResponseHeaders(404, -1);
                 return;

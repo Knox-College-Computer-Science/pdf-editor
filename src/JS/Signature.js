@@ -25,7 +25,7 @@ const addSignatureToCanvas = () => {
 
     const sig = new fabric.IText(name, {
         left: fabricCanvas.width / 2,
-        top: fabricCanvas.height * 0.75,
+        top: fabricCanvas.height * 0.50,
         fontFamily: SIGNATURE_FONT,
         fontSize: 52,
         fill: '#1a237e',

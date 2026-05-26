@@ -27,7 +27,7 @@ window.initUndo = function(fabricCanvas) {
 
     document.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase();
-        if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) {
             e.preventDefault();
             if (undoStack.length <= 1) {
                 const current = undoStack.pop();
@@ -41,7 +41,7 @@ window.initUndo = function(fabricCanvas) {
             const prev = undoStack[undoStack.length - 1];
             restoreState(prev);
         } 
-        else if (e.ctrlKey || e.metaKey || key === 'x') {
+        else if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z') {
             const target = e.target;
             if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable) {
                 return;
