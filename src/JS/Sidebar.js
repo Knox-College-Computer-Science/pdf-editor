@@ -143,10 +143,13 @@ const renderSidebar = async () => {
         // Render each thumbnail asynchronously
         (async (pageIndex, imgEl) => {
             const page = await pdfDoc.getPage(pageIndex);
-            const vp = page.getViewport({ scale: THUMB_SCALE });
+            const dpr = window.devicePixelRatio || 1;
+            const vp = page.getViewport({ scale: THUMB_SCALE * dpr });
             const tc = document.createElement('canvas');
             tc.width = vp.width;
             tc.height = vp.height;
+            tc.style.width = (vp.width / dpr) + 'px';
+            tc.style.height = (vp.height / dpr) + 'px';
             await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
             imgEl.src = tc.toDataURL();
         })(i, img);
