@@ -41,6 +41,9 @@ window.initUndo = function(fabricCanvas) {
             const prev = undoStack[undoStack.length - 1];
             restoreState(prev);
         } 
+        else if ((e.ctrlKey || e.metaKey) && key === 's') {
+            e.preventDefault();
+        }
         else if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z') {
             const target = e.target;
             if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable) {

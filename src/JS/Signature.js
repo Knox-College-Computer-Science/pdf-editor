@@ -23,9 +23,22 @@ const addSignatureToCanvas = () => {
     const name = document.getElementById('signature-name-input').value.trim();
     if (!name || !fabricCanvas) return;
 
+    const canvasEl = document.getElementById('pdf-render');
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const mainContent = document.querySelector('.main-content');
+    const viewRect = mainContent.getBoundingClientRect();
+
+    const visibleTop = Math.max(0, viewRect.top - canvasRect.top);
+    const visibleBottom = Math.min(fabricCanvas.height, viewRect.bottom - canvasRect.top);
+    const visibleLeft = Math.max(0, viewRect.left - canvasRect.left);
+    const visibleRight = Math.min(fabricCanvas.width, viewRect.right - canvasRect.left);
+
+    const centerX = (visibleLeft + visibleRight) / 2;
+    const centerY = (visibleTop + visibleBottom) / 2;
+
     const sig = new fabric.IText(name, {
-        left: fabricCanvas.width / 2,
-        top: fabricCanvas.height * 0.50,
+        left: centerX,
+        top: centerY,
         fontFamily: SIGNATURE_FONT,
         fontSize: 52,
         fill: '#1a237e',

@@ -93,6 +93,7 @@ const renderSidebar = async () => {
                 updateSelectedState();
             } else {
                 selectedPages.clear();
+                selectedPages.add(clickedPage);
                 lastClickedPage = clickedPage;
                 updateSelectedState();
                 goToPage(clickedPage);

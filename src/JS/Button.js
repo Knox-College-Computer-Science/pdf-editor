@@ -97,6 +97,19 @@ const initEditorElements = () => {
         updateSelectedState();
     });
 
+    document.getElementById('help-btn').addEventListener('click', () => {
+        document.getElementById('help-modal').classList.remove('hidden');
+    });
+    document.getElementById('help-close-btn').addEventListener('click', () => {
+        document.getElementById('help-modal').classList.add('hidden');
+    });
+    document.getElementById('help-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) document.getElementById('help-modal').classList.add('hidden');
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') document.getElementById('help-modal').classList.add('hidden');
+    });
+
     const buildAnnotatedPdf = async () => {
         pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
         const { PDFDocument } = PDFLib;
