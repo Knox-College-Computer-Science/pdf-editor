@@ -109,36 +109,80 @@ const rectsOverlap = (a, b) =>
 // This reduces duplicate / stacked highlights when text selection spans multiple
 // PDF text spans that are rendered as separate DOM rects.
 const mergeRectangles = (rects) => {
+  // Safety check: If there are no rectangles selected, return an empty array immediately
     if (rects.length === 0) return [];
 
-    const sorted = rects.slice().sort((a, b) => a.y - b.y || a.x - b.x);
-    const merged = [Object.assign({}, sorted[0])];
+    // Create a shallow copy of the incoming rectangles.
+    // This protects the original selection objects from being directly mutated during the merge process.
+    let result = rects.map(r => ({ x: r.x, y: r.y, width: r.width, height: r.height }));
+    
+    // Track whether any merge occurred during a pass. 
+    // If we merge rectangles, we need to restart the scan because the array shape changed.
+    let mergedSomething;
 
-    for (let i = 1; i < sorted.length; i++) {
-        const rect = sorted[i];
-        const last = merged[merged.length - 1];
+    do {
+        // Assume no merges will happen in this loop pass
+        mergedSomething = false;
 
-        // Allow a small gap tolerance so adjacent text boxes on the same line
-        // are merged instead of generating separate highlight rectangles.
-        // switched the number 2 to a zero to make the highlight tool more precise and not highlight extra space
-        const overlapY = rect.y <= last.y + last.height ;
-        const overlapX = rect.x <= last.x + last.width  && last.x <= rect.x + rect.width ;
+        // Loop through every rectangle in the array
+        for (let i = 0; i < result.length; i++) {
+            // Compare the current rectangle (r1) with every subsequent rectangle (r2)
+            for (let j = i + 1; j < result.length; j++) {
+                const r1 = result[i];
+                const r2 = result[j];
 
-        if (overlapY && overlapX) {
-            const x1 = Math.min(last.x, rect.x);
-            const y1 = Math.min(last.y, rect.y);
-            const x2 = Math.max(last.x + last.width, rect.x + rect.width);
-            const y2 = Math.max(last.y + last.height, rect.y + rect.height);
-            last.x = x1;
-            last.y = y1;
-            last.width = x2 - x1;
-            last.height = y2 - y1;
-        } else {
-            merged.push(Object.assign({}, rect));
+                // --- 1. VERTICAL LINE CHECK ---
+                // Calculate the exact vertical center point of both rectangles.
+                // This is much more reliable than checking top/bottom edges, which fluctuate due to font sizes.
+                const centerY1 = r1.y + r1.height / 2;
+                const centerY2 = r2.y + r2.height / 2;
+                
+                // Set a dynamic threshold: centers can only deviate by up to 50% of the smaller box's height.
+                // This allows bullets and text to match, but completely blocks separate lines of text from merging.
+                const maxCenterDistance = Math.min(r1.height, r2.height) * 0.5;
+                const isSameLine = Math.abs(centerY1 - centerY2) < maxCenterDistance;
+
+                // --- 2. HORIZONTAL PROXIMITY CHECK ---
+                // We allow an 8px horizontal gap (toleranceX). 
+                // This bridges the invisible gap between a bullet point element (•) and the first word of the text.
+                const toleranceX = 8; 
+                const isAdjacentX = (r1.x <= r2.x + r2.width + toleranceX) && (r2.x <= r1.x + r1.width + toleranceX);
+
+                // --- 3. THE MERGE CONDITION ---
+                // Only merge the two rectangles if they are confirmed to be on the SAME line AND close horizontally.
+                if (isSameLine && isAdjacentX) {
+                    
+                    // Calculate the new boundaries for a single, unified bounding box that encloses both r1 and r2
+                    const x1 = Math.min(r1.x, r2.x);
+                    const y1 = Math.min(r1.y, r2.y);
+                    const x2 = Math.max(r1.x + r1.width, r2.x + r2.width);
+                    const y2 = Math.max(r1.y + r1.height, r2.y + r2.height);
+
+                    // Update r1 in place to become this new expanded bounding box
+                    r1.x = x1;
+                    r1.y = y1;
+                    r1.width = x2 - x1;
+                    r1.height = y2 - y1;
+
+                    // Remove r2 from the array since its space has now been completely absorbed by r1
+                    result.splice(j, 1);
+
+                    // Flag that a merge happened, which tells the outer loop it needs to run another pass
+                    mergedSomething = true;
+                    
+                    // Break out of the inner loop early to restart scanning with our updated array
+                    break;
+                }
+            }
+            // If a merge happened, break out of the middle loop to reset the cycle
+            if (mergedSomething) break;
         }
-    }
+    // Keep repeating the entire scan until we loop through all rectangles without merging anything
+} while (mergedSomething);
 
-    return merged;
+    // Sort the final merged rectangles strictly from top-to-bottom, left-to-right.
+    // This ensures Fabric.js renders them in a highly predictable visual order on the canvas.
+    return result.sort((a, b) => a.y - b.y || a.x - b.x);
 };
 
 const handlePathCreated = (e) => {
@@ -222,7 +266,7 @@ const handleTextLayerHighlight = () => {
 
     const mergedRects = mergeRectangles(selRects);
     if (mergedRects.length === 0) return;
-
+// what makes the highlighter erase
     const existing = fabricCanvas.getObjects().filter(
         obj => obj.data && obj.data.type === 'highlight'
     );

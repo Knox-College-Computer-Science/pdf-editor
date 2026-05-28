@@ -18,7 +18,7 @@ bugs to fix:
 4th: 
 5th: 
 6th: highlighter works as inteeded for double spaced, but becomes a issue when its single spaced : fixed it
-7th: highlighter still double highlights sometimes, tends to happen when there is more gaps between words, every other sentence ends up being double highlighted
+7th: highlighter still double highlights sometimes, tends to happen when there is more gaps between words, every other sentence ends up being double highlighted. when going between lines, it highlights the whole page for a brief second which might cause it: FIXED IT!!!
 
 be able to add images 
 color hotbar

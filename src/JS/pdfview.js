@@ -254,6 +254,8 @@ const validatePdfFile = async file => {
 };
 
 // Landing page file input
+//this is basically what opens the pdf and makes it open, it is also probably the most important part of the code, it is also the part that makes the pdf open in the editor
+//also fun fact, the only code that truly needs to be in this file is prob this, but if it aint broken dont fix it
 document.getElementById('landing-file-input').addEventListener('change', async e => {
     const file = e.target.files[0];
     const err = await validatePdfFile(file);
@@ -266,6 +268,7 @@ document.getElementById('landing-file-input').addEventListener('change', async e
 });
 
 // Drag and drop on landing dropzone
+//this code also needs to stay in here because it is also important, it is the code that makes the drag and drop work, it is also the code that makes the pdf open in the editor when you drag and drop it
 const dropzone = document.getElementById('dropzone');
 dropzone.addEventListener('dragover', e => {
     e.preventDefault();
