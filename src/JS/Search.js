@@ -5,6 +5,27 @@ let currentMatchIdx = -1;
 let activeSearchTerm = '';
 let pageTextCache = {};
 
+const _measureCtx = document.createElement('canvas').getContext('2d');
+
+const measureItemSubstring = (item, relStart, relEnd) => {
+    if (relStart === 0 && relEnd >= item.str.length) {
+        return { xStart: item.cssLeft, xWidth: item.cssWidth };
+    }
+    _measureCtx.font = `${item.cssHeight}px sans-serif`;
+    const totalW = _measureCtx.measureText(item.str).width;
+    if (!totalW) {
+        const frac = item.str.length > 0 ? 1 / item.str.length : 0;
+        return {
+            xStart: item.cssLeft + relStart * frac * item.cssWidth,
+            xWidth: (relEnd - relStart) * frac * item.cssWidth,
+        };
+    }
+    const ratio = item.cssWidth / totalW;
+    const prefixW = relStart > 0 ? _measureCtx.measureText(item.str.slice(0, relStart)).width : 0;
+    const matchW = _measureCtx.measureText(item.str.slice(relStart, relEnd)).width;
+    return { xStart: item.cssLeft + prefixW * ratio, xWidth: matchW * ratio };
+};
+
 const clearPageTextCache = () => {
     Object.keys(pageTextCache).forEach(k => delete pageTextCache[k]);
 };
@@ -79,9 +100,7 @@ const applySearchHighlights = async () => {
         overlapping.forEach(({ matchStart, matchEnd, globalIdx }) => {
             const relStart = Math.max(0, matchStart - item.start);
             const relEnd = Math.min(item.str.length, matchEnd - item.start);
-            const charCount = item.str.length;
-            const xStart = item.cssLeft + (relStart / charCount) * item.cssWidth;
-            const xWidth = ((relEnd - relStart) / charCount) * item.cssWidth;
+            const { xStart, xWidth } = measureItemSubstring(item, relStart, relEnd);
 
             const mark = document.createElement('mark');
             mark.className = 'search-highlight' + (globalIdx === currentMatchIdx ? ' current' : '');
