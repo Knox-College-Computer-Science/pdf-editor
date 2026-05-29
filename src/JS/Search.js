@@ -21,13 +21,17 @@ const getPageTextCached = async (pageIndex) => {
         const tx = item.transform;
         const fontHeight = Math.abs(tx[3]);
         if (fontHeight === 0 || item.width === 0) return;
+        const vt = viewport.transform;
+        const cssLeft = vt[0] * tx[4] + vt[2] * tx[5] + vt[4];
+        const cssBaseline = vt[1] * tx[4] + vt[3] * tx[5] + vt[5];
+        const cssHeight = fontHeight * Math.abs(vt[3]);
         items.push({
             start: text.length,
             str: item.str,
-            cssLeft: tx[4] * scale,
-            cssTop: viewport.height - tx[5] * scale - fontHeight * scale,
-            cssWidth: item.width * scale,
-            cssHeight: fontHeight * scale,
+            cssLeft,
+            cssTop: cssBaseline - cssHeight,
+            cssWidth: item.width * Math.abs(vt[0]),
+            cssHeight,
         });
         text += item.str;
     });
