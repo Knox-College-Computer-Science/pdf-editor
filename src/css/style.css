@@ -597,9 +597,8 @@ body {
 
 mark.search-highlight {
     background: rgba(255, 200, 0, 0.45);
-    color: inherit;
     border-radius: 2px;
-    padding: 0;
+    pointer-events: none;
 }
 
 mark.search-highlight.current {

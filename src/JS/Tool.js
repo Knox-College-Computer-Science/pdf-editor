@@ -19,7 +19,7 @@ const setTool = (tool) => {
 
     if (tool !== 'highlight') {
         textLayerDiv.classList.remove('highlight-active');
-        textLayerDiv.innerHTML = '';
+        textLayerDiv.querySelectorAll('span').forEach(s => s.remove());
         fabricCanvas.selection = true;
     }
 
@@ -310,33 +310,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Text Layer for Highlighting
 const ensureTextLayer = async () => {
-    if (textLayerDiv.children.length > 0) return;
+    if (textLayerDiv.querySelector('span')) return;
     if (!pdfDoc) return;
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale });
-    const textContent = await page.getTextContent();
-
-    textLayerDiv.innerHTML = '';
     textLayerDiv.style.width = viewport.width + 'px';
     textLayerDiv.style.height = viewport.height + 'px';
 
-    textContent.items.forEach(item => {
-        if (!item.str || !item.str.trim()) return;
-        const tx = item.transform;
-        const fontHeight = Math.abs(tx[3]);
-        if (fontHeight === 0 || item.width === 0) return;
-
-        // Convert PDF coordinates (bottom-left origin) to CSS coordinates (top-left origin)
-        const cssLeft = tx[4] * scale;
-        const cssTop = viewport.height - tx[5] * scale - fontHeight * scale;
-
+    const { items } = await getPageTextCached(pageNum);
+    items.forEach(item => {
         const span = document.createElement('span');
         span.textContent = item.str;
-        span.style.left = cssLeft + 'px';
-        span.style.top = cssTop + 'px';
-        span.style.width = (item.width * scale) + 'px';
-        span.style.height = (fontHeight * scale) + 'px';
-        span.style.fontSize = (fontHeight * scale) + 'px';
+        span.style.left = item.cssLeft + 'px';
+        span.style.top = item.cssTop + 'px';
+        span.style.width = item.cssWidth + 'px';
+        span.style.height = item.cssHeight + 'px';
+        span.style.fontSize = item.cssHeight + 'px';
         textLayerDiv.appendChild(span);
     });
 };
