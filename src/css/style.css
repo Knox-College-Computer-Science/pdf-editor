@@ -425,6 +425,44 @@ body {
     background: var(--primary-hover);
 }
 
+.sig-recent-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.sig-recent-section.hidden {
+    display: none;
+}
+
+.sig-recent-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.sig-recent-btn {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a237e;
+    background: #f5f7ff;
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sig-recent-btn:hover {
+    background: #e8ecff;
+    border-color: var(--primary);
+}
+
 #color-picker {
     width: 32px;
     height: 30px;
