@@ -86,6 +86,7 @@ public class website {
                 sendStaticFile(exchange, Paths.get("src/JS/Signature.js"), "application/javascript");
                 return;
             }
+            
 
             sendStaticFile(exchange, Paths.get("src/index.html"), "text/html");
         }
