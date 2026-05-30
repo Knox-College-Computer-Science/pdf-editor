@@ -425,6 +425,152 @@ body {
     background: var(--primary-hover);
 }
 
+.sig-recent-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.sig-recent-section.hidden {
+    display: none;
+}
+
+.sig-recent-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.sig-recent-btn {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a237e;
+    background: #f5f7ff;
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sig-recent-btn:hover {
+    background: #e8ecff;
+    border-color: var(--primary);
+}
+
+/* Checkmark Modal */
+.checkmark-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkmark-modal.hidden {
+    display: none;
+}
+
+.checkmark-modal-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 280px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.checkmark-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--on-surface);
+}
+
+.checkmark-sym-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.checkmark-sym-btn {
+    flex: 1;
+    font-size: 2rem;
+    padding: 0.4rem;
+    border: 2px solid var(--outline);
+    border-radius: 8px;
+    background: var(--surface-container);
+    color: var(--on-surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.checkmark-sym-btn.active,
+.checkmark-sym-btn:hover {
+    border-color: var(--primary);
+    background: #e8ecff;
+}
+
+.checkmark-color-row {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.checkmark-color-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+.checkmark-color-btn.active,
+.checkmark-color-btn:hover {
+    border-color: var(--on-surface);
+    transform: scale(1.15);
+}
+
+.checkmark-preview {
+    font-size: 3.5rem;
+    font-weight: 700;
+    background: #f5f7ff;
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+    padding: 0.5rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkmark-add-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.checkmark-add-btn:hover {
+    background: var(--primary-hover);
+}
+
 #color-picker {
     width: 32px;
     height: 30px;
@@ -503,6 +649,16 @@ body {
     font-size: 0.8rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
+}
+
+#font-family optgroup[data-pdf-group] {
+    color: #aac4ff;
+    font-style: italic;
+}
+
+#font-family option[data-pdf-font] {
+    color: #e0e4f0;
+    font-style: normal;
 }
 
 #font-size {
@@ -597,9 +753,8 @@ body {
 
 mark.search-highlight {
     background: rgba(255, 200, 0, 0.45);
-    color: inherit;
     border-radius: 2px;
-    padding: 0;
+    pointer-events: none;
 }
 
 mark.search-highlight.current {
@@ -767,9 +922,15 @@ mark.search-highlight.current {
     forced-color-adjust: none;
 }
 
-#text-layer.highlight-active {
+#text-layer.highlight-active,
+#text-layer.style-pick-active {
     pointer-events: auto;
-    z-index: 5;
+    z-index: 10;
+}
+
+#text-layer.style-pick-active ::selection {
+    background: rgba(255, 140, 0, 0.35);
+    color: transparent;
 }
 
 #text-layer span {

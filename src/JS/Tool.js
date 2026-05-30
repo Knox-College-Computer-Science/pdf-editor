@@ -17,8 +17,13 @@ const setTool = (tool) => {
     const textControls = document.getElementById('text-controls');
     if (textControls) textControls.classList.toggle('visible', tool === 'text');
 
-    if (tool !== 'highlight') {
-        textLayerDiv.classList.remove('highlight-active');
+    const fabricWrapper = fabricCanvas.wrapperEl;
+
+    // Reset text layer state
+    textLayerDiv.classList.remove('highlight-active', 'style-pick-active');
+    fabricWrapper.style.pointerEvents = '';
+
+    if (tool !== 'highlight' && tool !== 'text') {
         textLayerDiv.innerHTML = '';
         fabricCanvas.selection = true;
     }
@@ -38,6 +43,12 @@ const setTool = (tool) => {
         fabricCanvas.selection = false;
         document.getElementById('color-picker').value = color;
         textLayerDiv.classList.add('highlight-active');
+        fabricWrapper.style.pointerEvents = 'none';
+        ensureTextLayer();
+    } else if (tool === 'text') {
+        fabricCanvas.isDrawingMode = false;
+        textLayerDiv.classList.add('style-pick-active');
+        fabricWrapper.style.pointerEvents = 'none';
         ensureTextLayer();
     } else if (tool === 'delete') {
         currentTool = 'delete';             // Track the active tool globally
@@ -202,6 +213,13 @@ const handlePathCreated = (e) => {
 const handleCanvasMouseDown = (e) => {
     if (currentTool !== 'text' || e.target) return;
     const pointer = fabricCanvas.getPointer(e.e);
+
+    // Apply nearest PDF text style before reading props
+    if (typeof findNearestTextStyle === 'function') {
+        const nearest = findNearestTextStyle(pointer.x, pointer.y);
+        if (nearest) applyStyleToControls(nearest);
+    }
+
     const { fontFamily, fontSize, fill } = getTextProps();
     const text = new fabric.IText('Type here', {
         left: pointer.x,
@@ -233,16 +251,66 @@ const handleFontSizeChange = () => {
     }
 };
 
+const applyStyleToControls = (style) => {
+    const fontSelect = document.getElementById('font-family');
+    const sizeInput = document.getElementById('font-size');
+    const colorPicker = document.getElementById('color-picker');
+    if (style.fontName) {
+        const exists = [...fontSelect.options].some(o => o.value === style.fontName);
+        if (exists) fontSelect.value = style.fontName;
+    }
+    if (style.fontSize) sizeInput.value = style.fontSize;
+    if (style.color) colorPicker.value = style.color;
+};
+
 const syncFontControls = (e) => {
     const obj = e.selected?.[0];
     if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
         document.getElementById('font-family').value = obj.fontFamily || 'Arial';
         document.getElementById('font-size').value = obj.fontSize || 20;
+        document.getElementById('color-picker').value = obj.fill || '#000000';
+        document.getElementById('text-controls').classList.add('visible');
+        // Visually activate Text button to show font/size info
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tool-text').classList.add('active');
     }
 };
+
+const clearTextControls = () => {
+    if (currentTool !== 'text') {
+        document.getElementById('text-controls').classList.remove('visible');
+        updateToolButtons();
+    }
+};
+
+const enableFabricInteraction = () => {
+    fabricCanvas.wrapperEl.style.pointerEvents = '';
+    textLayerDiv.classList.remove('style-pick-active');
+};
+
+const handleTextLayerMouseUp = () => {
+    if (currentTool === 'text') {
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+            const anchorSpan = selection.anchorNode?.parentElement;
+            selection.removeAllRanges();
+            if (anchorSpan && textLayerDiv.contains(anchorSpan)) {
+                const x = parseFloat(anchorSpan.style.left);
+                const y = parseFloat(anchorSpan.style.top);
+                if (typeof findNearestTextStyle === 'function') {
+                    const nearest = findNearestTextStyle(x, y);
+                    if (nearest) applyStyleToControls(nearest);
+                }
+            }
+        }
+        enableFabricInteraction();
+        return;
+    }
+    if (currentTool === 'highlight') handleTextLayerHighlight();
+};
+
 // this is what makes the highlight tool work, it checks if the highlight tool is selected and then gets the selection and creates a rectangle around it
 const handleTextLayerHighlight = () => {
-    if (currentTool !== 'highlight') return;
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const range = selection.getRangeAt(0);
@@ -339,10 +407,39 @@ const initTools = () => {
     fabricCanvas.on('mouse:down', handleCanvasMouseDown);
     fabricCanvas.on('selection:created', syncFontControls);
     fabricCanvas.on('selection:updated', syncFontControls);
-    textLayerDiv.addEventListener('mouseup', handleTextLayerHighlight);
+    fabricCanvas.on('selection:cleared', clearTextControls);
+    fabricCanvas.on('text:editing:entered', (e) => {
+        const obj = e.target;
+        document.getElementById('font-family').value = obj.fontFamily || 'Arial';
+        document.getElementById('font-size').value = obj.fontSize || 20;
+        document.getElementById('color-picker').value = obj.fill || '#000000';
+        document.getElementById('text-controls').classList.add('visible');
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tool-text').classList.add('active');
+    });
+    fabricCanvas.on('text:editing:exited', () => {
+        if (currentTool !== 'text') {
+            document.getElementById('text-controls').classList.remove('visible');
+            updateToolButtons();
+        }
+    });
+    textLayerDiv.addEventListener('mouseup', handleTextLayerMouseUp);
 
     document.getElementById('font-family').addEventListener('change', handleFontFamilyChange);
     document.getElementById('font-size').addEventListener('input', handleFontSizeChange);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+        const active = fabricCanvas.getActiveObject();
+        if (!active) return;
+        // Don't intercept while editing text
+        if (active.isEditing) return;
+        // Don't intercept if focus is inside an input/textarea
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        deleteSelection();
+    });
 };
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -354,33 +451,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Text Layer for Highlighting
 const ensureTextLayer = async () => {
-    if (textLayerDiv.children.length > 0) return;
+    if (textLayerDiv.querySelector('span')) return;
     if (!pdfDoc) return;
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale });
-    const textContent = await page.getTextContent();
-
-    textLayerDiv.innerHTML = '';
     textLayerDiv.style.width = viewport.width + 'px';
     textLayerDiv.style.height = viewport.height + 'px';
 
-    textContent.items.forEach(item => {
-        if (!item.str || !item.str.trim()) return;
-        const tx = item.transform;
-        const fontHeight = Math.abs(tx[3]);
-        if (fontHeight === 0 || item.width === 0) return;
-
-        // Convert PDF coordinates (bottom-left origin) to CSS coordinates (top-left origin)
-        const cssLeft = tx[4] * scale;
-        const cssTop = viewport.height - tx[5] * scale - fontHeight * scale;
-
+    const { items } = await getPageTextCached(pageNum);
+    items.forEach(item => {
         const span = document.createElement('span');
         span.textContent = item.str;
-        span.style.left = cssLeft + 'px';
-        span.style.top = cssTop + 'px';
-        span.style.width = (item.width * scale) + 'px';
-        span.style.height = (fontHeight * scale) + 'px';
-        span.style.fontSize = (fontHeight * scale) + 'px';
+        span.style.left = item.cssLeft + 'px';
+        span.style.top = item.cssTop + 'px';
+        span.style.width = item.cssWidth + 'px';
+        span.style.height = item.cssHeight + 'px';
+        span.style.fontSize = item.cssHeight + 'px';
         textLayerDiv.appendChild(span);
     });
 };

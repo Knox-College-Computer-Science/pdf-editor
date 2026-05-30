@@ -5,6 +5,27 @@ let currentMatchIdx = -1;
 let activeSearchTerm = '';
 let pageTextCache = {};
 
+const _measureCtx = document.createElement('canvas').getContext('2d');
+
+const measureItemSubstring = (item, relStart, relEnd) => {
+    if (relStart === 0 && relEnd >= item.str.length) {
+        return { xStart: item.cssLeft, xWidth: item.cssWidth };
+    }
+    _measureCtx.font = `${item.cssHeight}px sans-serif`;
+    const totalW = _measureCtx.measureText(item.str).width;
+    if (!totalW) {
+        const frac = item.str.length > 0 ? 1 / item.str.length : 0;
+        return {
+            xStart: item.cssLeft + relStart * frac * item.cssWidth,
+            xWidth: (relEnd - relStart) * frac * item.cssWidth,
+        };
+    }
+    const ratio = item.cssWidth / totalW;
+    const prefixW = relStart > 0 ? _measureCtx.measureText(item.str.slice(0, relStart)).width : 0;
+    const matchW = _measureCtx.measureText(item.str.slice(relStart, relEnd)).width;
+    return { xStart: item.cssLeft + prefixW * ratio, xWidth: matchW * ratio };
+};
+
 const clearPageTextCache = () => {
     Object.keys(pageTextCache).forEach(k => delete pageTextCache[k]);
 };
@@ -12,14 +33,27 @@ const clearPageTextCache = () => {
 const getPageTextCached = async (pageIndex) => {
     if (pageTextCache[pageIndex]) return pageTextCache[pageIndex];
     const page = await pdfDoc.getPage(pageIndex);
+    const viewport = page.getViewport({ scale });
     const textContent = await page.getTextContent();
     let text = '';
     const items = [];
     textContent.items.forEach(item => {
         if (!item.str || !item.str.trim()) return;
         const tx = item.transform;
-        if (Math.abs(tx[3]) === 0 || item.width === 0) return;
-        items.push({ start: text.length, str: item.str });
+        const fontHeight = Math.abs(tx[3]);
+        if (fontHeight === 0 || item.width === 0) return;
+        const vt = viewport.transform;
+        const cssLeft = vt[0] * tx[4] + vt[2] * tx[5] + vt[4];
+        const cssBaseline = vt[1] * tx[4] + vt[3] * tx[5] + vt[5];
+        const cssHeight = fontHeight * Math.abs(vt[3]);
+        items.push({
+            start: text.length,
+            str: item.str,
+            cssLeft,
+            cssTop: cssBaseline - cssHeight,
+            cssWidth: item.width * Math.abs(vt[0]),
+            cssHeight,
+        });
         text += item.str;
     });
     return (pageTextCache[pageIndex] = { text, items });
@@ -27,19 +61,7 @@ const getPageTextCached = async (pageIndex) => {
 
 const clearSearchHighlights = () => {
     if (!textLayerDiv) return;
-    const cache = pageTextCache[pageNum];
-    const spans = Array.from(textLayerDiv.querySelectorAll('span'));
-    spans.forEach((span, i) => {
-        if (cache && i < cache.items.length) {
-            span.textContent = cache.items[i].str;
-        } else if (span.querySelector('mark.search-highlight')) {
-            // fallback: unwrap marks
-            span.querySelectorAll('mark.search-highlight').forEach(mark => {
-                while (mark.firstChild) mark.parentNode.insertBefore(mark.firstChild, mark);
-                mark.parentNode.removeChild(mark);
-            });
-        }
-    });
+    textLayerDiv.querySelectorAll('mark.search-highlight').forEach(m => m.remove());
 };
 
 const applySearchHighlights = async () => {
@@ -53,7 +75,6 @@ const applySearchHighlights = async () => {
     const lowerTerm = activeSearchTerm.toLowerCase();
     const lowerText = text.toLowerCase();
 
-    // Collect all match offsets on this page
     const pageMatchOffsets = [];
     let idx = 0;
     while ((idx = lowerText.indexOf(lowerTerm, idx)) !== -1) {
@@ -62,15 +83,9 @@ const applySearchHighlights = async () => {
     }
     if (pageMatchOffsets.length === 0) return;
 
-    // Map page-local match index → global match index
     const globalOffset = searchMatches.filter(m => m.page < pageNum).length;
 
-    const spans = Array.from(textLayerDiv.querySelectorAll('span'));
-
-    items.forEach((item, spanIdx) => {
-        const span = spans[spanIdx];
-        if (!span) return;
-
+    items.forEach((item) => {
         const itemEnd = item.start + item.str.length;
         const overlapping = pageMatchOffsets
             .map((matchStart, mi) => ({
@@ -82,22 +97,20 @@ const applySearchHighlights = async () => {
 
         if (overlapping.length === 0) return;
 
-        const orig = item.str;
-        span.textContent = '';
-        let cursor = 0;
-
         overlapping.forEach(({ matchStart, matchEnd, globalIdx }) => {
             const relStart = Math.max(0, matchStart - item.start);
-            const relEnd = Math.min(orig.length, matchEnd - item.start);
-            if (relStart > cursor) span.appendChild(document.createTextNode(orig.slice(cursor, relStart)));
+            const relEnd = Math.min(item.str.length, matchEnd - item.start);
+            const { xStart, xWidth } = measureItemSubstring(item, relStart, relEnd);
+
             const mark = document.createElement('mark');
             mark.className = 'search-highlight' + (globalIdx === currentMatchIdx ? ' current' : '');
-            mark.textContent = orig.slice(relStart, relEnd);
-            span.appendChild(mark);
-            cursor = relEnd;
+            mark.style.position = 'absolute';
+            mark.style.left = xStart + 'px';
+            mark.style.top = item.cssTop + 'px';
+            mark.style.width = xWidth + 'px';
+            mark.style.height = item.cssHeight + 'px';
+            textLayerDiv.appendChild(mark);
         });
-
-        if (cursor < orig.length) span.appendChild(document.createTextNode(orig.slice(cursor)));
     });
 
     const currentMark = textLayerDiv.querySelector('mark.search-highlight.current');

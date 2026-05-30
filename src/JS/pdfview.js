@@ -232,6 +232,8 @@ const loadPdfDocument = async (source) => {
         selectedPages.clear();
         lastClickedPage = null;
         clearPageTextCache();
+        detectedPdfFonts = new Map();
+        updatePdfFontDropdown();
         showEditor();
         initEditorElements();
         initFabricCanvas();

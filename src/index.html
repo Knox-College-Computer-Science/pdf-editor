@@ -14,7 +14,8 @@
     <script src="JS/rendering.js"></script>
     <script src="JS/Search.js"></script>
     <script src="JS/Signature.js"></script>
-    <title>NoBSPDFeditor</title>
+    <script src="JS/Checkmark.js"></script>
+    <title>PDFPro</title>
 </head>
 <body>
 
@@ -106,6 +107,9 @@
         </button>
         <button class="tool-btn" id="tool-signature" title="Add Signature">
             <i class="fas fa-signature"></i> Signature
+        </button>
+        <button class="tool-btn" id="tool-checkmark" title="Add Checkmark">
+            <i class="fas fa-check"></i> Checkmark
         </button>
         <button class="tool-btn" id="tool-delete" title="Delete Selected">
             <i class="fas fa-trash"></i> Delete
@@ -218,12 +222,40 @@
         </button>
     </div>
 
+    <!-- Checkmark Modal -->
+    <div id="checkmark-modal" class="checkmark-modal hidden">
+        <div class="checkmark-modal-box">
+            <div class="checkmark-modal-header">
+                <span>Add Checkmark</span>
+                <button id="checkmark-close-btn" class="signature-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="checkmark-sym-row">
+                <button class="checkmark-sym-btn active" data-sym="✓">✓</button>
+                <button class="checkmark-sym-btn" data-sym="✗">✗</button>
+            </div>
+            <div class="checkmark-color-row">
+                <button class="checkmark-color-btn active" data-color="#1b5e20" style="background:#1b5e20" title="Green"></button>
+                <button class="checkmark-color-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+                <button class="checkmark-color-btn" data-color="#1a237e" style="background:#1a237e" title="Dark Blue"></button>
+                <button class="checkmark-color-btn" data-color="#b71c1c" style="background:#b71c1c" title="Red"></button>
+            </div>
+            <div id="checkmark-preview" class="checkmark-preview">✓</div>
+            <button id="checkmark-add-btn" class="checkmark-add-btn">
+                <i class="fas fa-check"></i> Add to PDF
+            </button>
+        </div>
+    </div>
+
     <!-- Signature Modal -->
     <div id="signature-modal" class="signature-modal hidden">
         <div class="signature-modal-box">
             <div class="signature-modal-header">
                 <span>Add Signature</span>
                 <button id="signature-close-btn" class="signature-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="sig-recent-section" class="sig-recent-section hidden">
+                <div class="signature-preview-label">Recent</div>
+                <div id="sig-recent-list" class="sig-recent-list"></div>
             </div>
             <input type="text" id="signature-name-input" class="signature-input" placeholder="Enter your name...">
             <div class="signature-preview-label">Preview</div>

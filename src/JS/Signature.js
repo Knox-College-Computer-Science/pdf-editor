@@ -1,6 +1,36 @@
 // --- Signature ---
 
 const SIGNATURE_FONT = 'Dancing Script';
+const SIG_STORAGE_KEY = 'recentSignatures';
+const MAX_RECENT_SIGS = 3;
+
+const loadRecentSigs = () => {
+    try { return JSON.parse(localStorage.getItem(SIG_STORAGE_KEY)) || []; }
+    catch { return []; }
+};
+
+const saveToRecentSigs = (name) => {
+    const list = loadRecentSigs().filter(s => s !== name);
+    list.unshift(name);
+    localStorage.setItem(SIG_STORAGE_KEY, JSON.stringify(list.slice(0, MAX_RECENT_SIGS)));
+};
+
+const renderRecentSigs = () => {
+    const list = loadRecentSigs();
+    const section = document.getElementById('sig-recent-section');
+    const container = document.getElementById('sig-recent-list');
+    container.innerHTML = '';
+    if (list.length === 0) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+    list.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'sig-recent-btn';
+        btn.textContent = name;
+        btn.title = `Add "${name}" to PDF`;
+        btn.addEventListener('click', () => addSignatureToCanvasWithName(name));
+        container.appendChild(btn);
+    });
+};
 
 const openSignatureModal = () => {
     document.getElementById('signature-modal').classList.remove('hidden');
@@ -8,6 +38,7 @@ const openSignatureModal = () => {
     input.focus();
     input.select();
     updateSignaturePreview();
+    renderRecentSigs();
 };
 
 const closeSignatureModal = () => {
@@ -19,8 +50,7 @@ const updateSignaturePreview = () => {
     document.getElementById('signature-preview').textContent = name.trim() || 'Your Name';
 };
 
-const addSignatureToCanvas = () => {
-    const name = document.getElementById('signature-name-input').value.trim();
+const addSignatureToCanvasWithName = (name) => {
     if (!name || !fabricCanvas) return;
 
     const canvasEl = document.getElementById('pdf-render');
@@ -50,8 +80,14 @@ const addSignatureToCanvas = () => {
     fabricCanvas.add(sig);
     fabricCanvas.setActiveObject(sig);
     fabricCanvas.renderAll();
+    saveToRecentSigs(name);
     closeSignatureModal();
     setTool('select');
+};
+
+const addSignatureToCanvas = () => {
+    const name = document.getElementById('signature-name-input').value.trim();
+    addSignatureToCanvasWithName(name);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
