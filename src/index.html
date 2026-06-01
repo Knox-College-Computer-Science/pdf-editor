@@ -15,7 +15,7 @@
     <script src="JS/Search.js"></script>
     <script src="JS/Signature.js"></script>
     <script src="JS/Checkmark.js"></script>
-    <title>PDFPro</title>
+    <title>NoBSPDFeditor</title>
 </head>
 <body>
 
@@ -50,6 +50,15 @@
         <span class="page-info">
             Page <span id="page-num"></span> of <span id="page-count"></span>
         </span>
+        <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
+            <i class="fas fa-download"></i> Download
+        </button>
+        <button class="tool-btn print-btn" id="print-btn" title="Print PDF">
+            <i class="fas fa-print"></i> Print
+        </button>
+        <button class="tool-btn help-btn" id="help-btn" title="Help &amp; Guide">
+            <i class="fas fa-question-circle"></i> Help
+        </button>
     </div>
 
     <div class="upload-bar">
@@ -61,6 +70,9 @@
             <i class="fas fa-file-import"></i> Insert PDF
         </label>
         <input id="insert-pdf-input" type="file" accept="application/pdf">
+        <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
+            <i class="fas fa-file-excel"></i> Delete Page
+        </button>
         <div id="file-error" class="error"></div>
     </div>
 
@@ -114,18 +126,9 @@
         <button class="tool-btn" id="tool-delete" title="Delete Selected">
             <i class="fas fa-trash"></i> Delete
         </button>
-        <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
+        <!-- <button class="tool-btn delete-page-btn" id="delete-page-btn" title="Delete Current Page">
             <i class="fas fa-file-excel"></i> Delete Page
-        </button>
-        <button class="tool-btn download-btn" id="download-btn" title="Download PDF">
-            <i class="fas fa-download"></i> Download
-        </button>
-        <button class="tool-btn print-btn" id="print-btn" title="Print PDF">
-            <i class="fas fa-print"></i> Print
-        </button>
-        <button class="tool-btn help-btn" id="help-btn" title="Help &amp; Guide">
-            <i class="fas fa-question-circle"></i> Help
-        </button>
+        </button> -->
     </div>
 
     <!-- Help Modal -->
@@ -145,14 +148,14 @@
                     </div>
                 </div>
 
-                <div class="help-section">
+                <!-- <div class="help-section">
                     <div class="help-section-title"><i class="fas fa-arrows-alt"></i> Navigation</div>
                     <div class="help-grid">
                         <div class="help-item"><span class="help-label">Prev / Next</span><span class="help-desc">Use the <b>Prev</b> and <b>Next</b> buttons in the top bar to move between pages.</span></div>
                         <div class="help-item"><span class="help-label">Sidebar thumbnails</span><span class="help-desc">Click any thumbnail in the left sidebar to jump directly to that page.</span></div>
                         <div class="help-item"><span class="help-label">Reorder pages</span><span class="help-desc">Drag a thumbnail up or down in the sidebar to rearrange pages.</span></div>
                     </div>
-                </div>
+                </div> -->
 
                 
 
@@ -160,25 +163,26 @@
                     <div class="help-section-title"><i class="fas fa-palette"></i> Color &amp; Brush</div>
                     <div class="help-grid">
                         <div class="help-item"><span class="help-label">Color picker</span><span class="help-desc">Click the color swatch in the toolbar to open the full color picker.</span></div>
-                        <div class="help-item"><span class="help-label">Color hotbar</span><span class="help-desc">Quickly switch between saved colors. The first two slots are presets. Click an <b>empty slot</b> to save the current color there.</span></div>
+                        <div class="help-item"><span class="help-label">Color hotbar</span><span class="help-desc">Quickly switch between saved colors. The first two slots are presets. Click an <b>empty slot</b> to save the current color there. Right-click a slot to get rid of the color</span></div>
                         <div class="help-item"><span class="help-label">Brush size</span><span class="help-desc">Drag the slider to change the draw/eraser stroke width.</span></div>
                     </div>
                 </div>
 
-                <div class="help-section">
+                <!-- <div class="help-section">
                     <div class="help-section-title"><i class="fas fa-copy"></i> Page Management</div>
                     <div class="help-grid">
                         <div class="help-item"><span class="help-label">Delete Page</span><span class="help-desc">Click <b>Delete Page</b> in the toolbar to permanently remove the current page.</span></div>
                         <div class="help-item"><span class="help-label">Extract pages</span><span class="help-desc">Select pages in the sidebar (see below), then click the <b>Extract</b> button that appears to save them as a separate PDF.</span></div>
                     </div>
-                </div>
+                </div> -->
 
                 <div class="help-section">
-                    <div class="help-section-title"><i class="fas fa-th-list"></i> Sidebar Multi-Select</div>
+                    <div class="help-section-title"><i class="fas fa-th-list"></i> Extract Pages</div>
                     <div class="help-grid">
-                        <div class="help-item"><span class="help-label">Single click</span><span class="help-desc">Navigate to a page and select it.</span></div>
+                        <div class="help-item"><span class="help-label">Extract pages</span><span class="help-desc">Select pages in the sidebar (see below), then click the <b>Extract</b> button that appears to save them as a separate PDF.</span></div>
                         <div class="help-item"><span class="help-label">Ctrl + click</span><span class="help-desc">Toggle individual pages in or out of the selection without deselecting others.</span></div>
                         <div class="help-item"><span class="help-label">Shift + click</span><span class="help-desc">Select a contiguous range of pages from the last clicked page.</span></div>
+                        <div class="help-item"><span class="help-label">Reorder pages</span><span class="help-desc">Drag a thumbnail up or down in the sidebar to rearrange pages.</span></div>
                     </div>
                 </div>
 

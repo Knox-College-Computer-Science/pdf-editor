@@ -178,6 +178,16 @@ body {
     margin-right: 0.5rem;
 }
 
+.top-bar #help-btn {
+    margin-left: 0;
+}
+.top-bar #download-btn {
+    margin-left: auto;
+}
+.top-bar #print-btn {
+    margin-left: 0.5rem;
+}
+
 .btn {
     background: rgba(255,255,255,0.15);
     color: var(--on-primary);
@@ -291,14 +301,14 @@ body {
 }
 
 .delete-page-btn {
-    margin-left: auto;
-    background: rgba(185, 13, 26, 0.2);
-    color: #ff8a8a;
-    border-color: rgba(185, 13, 26, 0.3);
+    background: var(--surface-container-high);
+    color: var(--on-surface);
+    border: 1px solid var(--outline);
+    font-weight: 500;
 }
 
 .delete-page-btn:hover {
-    background: rgba(185, 13, 26, 0.35);
+    background: var(--surface-container);
 }
 
 .download-btn {
@@ -641,24 +651,34 @@ body {
 }
 
 #font-family {
-    background: rgba(255,255,255,0.1);
-    color: #e0e4f0;
+    background: rgba(255,255,255,0.08);
+    color: #ffffff; /* collapsed/select box text should be white for readability */
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 4px;
     padding: 0.25rem 0.4rem;
     font-size: 0.8rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
+    -webkit-text-fill-color: #ffffff; /* ensure webkit browsers show white text */
+}
+
+/* Keep dropdown option text dark on white dropdown background */
+#font-family option {
+    color: var(--on-surface);
 }
 
 #font-family optgroup[data-pdf-group] {
-    color: #aac4ff;
+    color: #3b82f6; /* blue for PDF Fonts group label */
     font-style: italic;
 }
 
 #font-family option[data-pdf-font] {
-    color: #e0e4f0;
+    color: var(--on-surface);
     font-style: normal;
+}
+
+#font-family option {
+    color: var(--on-surface);
 }
 
 #font-size {

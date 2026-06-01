@@ -232,7 +232,7 @@ const handleCanvasMouseDown = (e) => {
     fabricCanvas.setActiveObject(text);
     text.enterEditing();
     text.selectAll(); // Select the placeholder so typing replaces it immediately
-    setTool('select');
+    
 };
 
 const handleFontFamilyChange = () => {

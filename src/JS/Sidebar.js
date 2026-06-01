@@ -82,6 +82,7 @@ const renderSidebar = async () => {
                 const max = Math.max(anchor, clickedPage);
                 for (let p = min; p <= max; p++) selectedPages.add(p);
                 updateSelectedState();
+                lastClickedPage = clickedPage;
             } else if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 if (selectedPages.has(clickedPage)) {
@@ -93,9 +94,8 @@ const renderSidebar = async () => {
                 updateSelectedState();
             } else {
                 selectedPages.clear();
-                selectedPages.add(clickedPage);
-                lastClickedPage = clickedPage;
                 updateSelectedState();
+                lastClickedPage = clickedPage;
                 goToPage(clickedPage);
             }
         });
