@@ -7,6 +7,26 @@ A browser-based PDF editor. All editing happens locally — nothing is uploaded 
 
 Full project report and SE process notes are available in [`docs/`](./docs/).
 
+## Requirements
+
+The application must satisfy the following functional requirements:
+
+- Users can open a PDF file via drag-and-drop or file picker
+- Users can navigate between pages (previous, next, direct jump)
+- Users can add, move, and delete text annotations
+- Users can draw freehand on the page
+- Users can erase drawn content
+- Users can highlight PDF text
+- Users can add signatures and checkmarks
+- Users can search for text across all pages
+- Users can reorder, delete, and extract pages
+- Users can insert pages from another PDF
+- Users can undo and redo annotation changes
+- Users can save the annotated document as a PDF file
+- The application runs entirely in the browser with no server-side processing
+
+---
+
 ## Setup & Installation
 
 You need Node.js (v18+) for running tests. For the app itself, you just need a browser and a local HTTP server (browsers block ES modules over `file://`).
