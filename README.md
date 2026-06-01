@@ -21,6 +21,7 @@ npm install
 - VS Code Live Server: right-click `src/index.html` → Open with Live Server
 - Python: `cd src && python3 -m http.server 8000`, then go to `http://localhost:8000`
 - Node: `npx serve src`
+- Go to main.java, press run, then start debugging, go to your favorite browser and past this link into the search bar `http://localhost:8000`
 
 The app loads PDF.js, pdf-lib, and Fabric.js from CDN, so you need an internet connection the first time. After that the browser caches them.
 
