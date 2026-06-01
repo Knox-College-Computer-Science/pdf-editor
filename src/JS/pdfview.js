@@ -161,7 +161,7 @@ const initFabricCanvas = () => {
 
 // 1. Delete an object immediately on click down
 fabricCanvas.on('mouse:down', function(options) {
-    if (currentTool === 'delete') {
+    if (currentTool === 'delete' && !fabricCanvas.isDrawingMode) {
         isErasing = true;
         if (options.target) {
             fabricCanvas.remove(options.target);
@@ -172,7 +172,7 @@ fabricCanvas.on('mouse:down', function(options) {
 
 // 2. Delete objects continuously as the mouse drags across them
 fabricCanvas.on('mouse:move', function(options) {
-    if (isErasing && currentTool === 'delete') {
+    if (isErasing && currentTool === 'delete' && !fabricCanvas.isDrawingMode) {
         if (options.target) {
             fabricCanvas.remove(options.target);
             fabricCanvas.renderAll();
@@ -182,7 +182,7 @@ fabricCanvas.on('mouse:move', function(options) {
 
 // 3. Stop erasing when mouse button is released
 fabricCanvas.on('mouse:up', function() {
-    if (currentTool === 'delete' && isErasing) {
+    if (currentTool === 'delete' && isErasing && !fabricCanvas.isDrawingMode) {
         isErasing = false;
         saveHistory(); // Auto-saves to your undo stack!
     }

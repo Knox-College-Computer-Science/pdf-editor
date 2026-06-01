@@ -17,8 +17,8 @@ bugs to fix:
 3rd: 
 4th: 
 5th: when undoing everything on a page and then switch pages and go back to that page, u can undo more stuff?
-6th: highlighter works as inteeded for double spaced, but becomes a issue when its single spaced : fixed it
-7th: highlighter still double highlights sometimes, tends to happen when there is more gaps between words, every other sentence ends up being double highlighted. when going between lines, it highlights the whole page for a brief second which might cause it: FIXED IT!!!
+6th: pressing the checkmark with the text tool lets you cange the font and size of it
+7th: when drawing something like a start, ends up deleting the corners 
 
 be able to add images 
 color hotbar

@@ -90,6 +90,10 @@ public class website {
                 sendStaticFile(exchange, Paths.get("src/JS/Checkmark.js"), "application/javascript");
                 return;
             }
+            if ("/JS/Text.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Text.js"), "application/javascript");
+                return;
+            }
 
             sendStaticFile(exchange, Paths.get("src/index.html"), "text/html");
         }
@@ -130,7 +134,10 @@ public class website {
                 jsFile = Paths.get("src/JS/Signature.js");
             } else if ("/Checkmark.js".equals(requestPath) || "/JS/Checkmark.js".equals(requestPath)) {
                 jsFile = Paths.get("src/JS/Checkmark.js");
-            } else {
+            } else if ("/Text.js".equals(requestPath) || "/JS/Text.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Text.js");
+            }
+            else {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }

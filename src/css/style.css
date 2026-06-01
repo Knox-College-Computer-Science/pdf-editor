@@ -185,7 +185,7 @@ body {
     margin-left: auto;
 }
 .top-bar #print-btn {
-    margin-left: 0.5rem;
+    margin-left: 0;
 }
 
 .btn {
@@ -323,13 +323,14 @@ body {
 }
 
 .print-btn {
-    background: rgba(255,255,255,0.08);
-    color: #e0e4f0;
-    font-weight: 500;
+    background: #198754;
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
 }
 
 .print-btn:hover {
-    background: rgba(255,255,255,0.15);
+    background: #146c43;
 }
 
 /* Signature Modal */
@@ -643,6 +644,21 @@ body {
 
 .text-controls.visible {
     display: flex;
+}
+
+.text-style-controls {
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+}
+
+.text-style-controls .tool-btn {
+    padding: 0.35rem 0.5rem;
+    min-width: 34px;
+    font-size: 0.95rem;
 }
 
 .text-controls-label {

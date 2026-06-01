@@ -1,16 +1,26 @@
 
 
-let currentTool = 'select';
+let currentTool = null;
 
-const getTextProps = () => ({
-    fontFamily: document.getElementById('font-family').value,
-    fontSize: parseInt(document.getElementById('font-size').value) || 20,
-    fill: document.getElementById('color-picker').value,
-});
 //the buttons that make up the tool bar
 const setTool = (tool) => {
+    if (!tool) return;
     currentTool = tool;
+
+    if (fabricCanvas) {
+        const active = fabricCanvas.getActiveObject();
+        if (active) {
+            fabricCanvas.discardActiveObject();
+            if (typeof fabricCanvas.requestRenderAll === 'function') {
+                fabricCanvas.requestRenderAll();
+            } else {
+                fabricCanvas.renderAll();
+            }
+        }
+    }
+
     updateToolButtons();
+    updateTextToolVisibility(tool === 'text');
 
     const color = document.getElementById('color-picker').value;
     const size = parseInt(document.getElementById('brush-size').value, 10) || 3;
@@ -23,21 +33,31 @@ const setTool = (tool) => {
     textLayerDiv.classList.remove('highlight-active', 'style-pick-active');
     fabricWrapper.style.pointerEvents = '';
 
-    if (tool !== 'highlight' && tool !== 'text') {
+    // Clear text layer state for tools that are not text, highlight, or mouse
+    if (tool !== 'highlight' && tool !== 'text' && tool !== 'mouse') {
         textLayerDiv.innerHTML = '';
-        fabricCanvas.selection = true;
+        if (fabricCanvas) fabricCanvas.selection = true;
     }
+
+    // Ensure we start with object hit-testing enabled; specific tools may disable it
+    if (fabricCanvas) fabricCanvas.skipTargetFind = false;
 
     if (tool === 'eraser') {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush = new fabric.EraserBrush(fabricCanvas);
         fabricCanvas.freeDrawingBrush.width = size || 30;
         fabricCanvas.freeDrawingBrush.color = 'rgb(112, 110, 110)';
+        // Use rounded joins/caps to avoid sharp self-intersection artifacts
+        fabricCanvas.freeDrawingBrush.strokeLineJoin = 'round';
+        fabricCanvas.freeDrawingBrush.strokeLineCap = 'round';
     } else if (tool === 'draw') {
         fabricCanvas.isDrawingMode = true;
         fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
         fabricCanvas.freeDrawingBrush.color = color;
         fabricCanvas.freeDrawingBrush.width = size;
+        // Prevent corners from being rendered as transparent gaps by using rounded joins/caps
+        fabricCanvas.freeDrawingBrush.strokeLineJoin = 'round';
+        fabricCanvas.freeDrawingBrush.strokeLineCap = 'round';
     } else if (tool === 'highlight') {
         fabricCanvas.isDrawingMode = false;
         fabricCanvas.selection = false;
@@ -49,6 +69,17 @@ const setTool = (tool) => {
         fabricCanvas.isDrawingMode = false;
         textLayerDiv.classList.add('style-pick-active');
         fabricWrapper.style.pointerEvents = 'none';
+        ensureTextLayer();
+    } else if (tool === 'mouse') {
+        // Mouse tool: let the user interact with the underlying text layer, but
+        // prevent Fabric objects from being targetable or selected.
+        fabricCanvas.isDrawingMode = false;
+        fabricCanvas.selection = false;
+        fabricCanvas.skipTargetFind = true;
+        fabricCanvas.defaultCursor = 'default';
+        fabricWrapper.style.pointerEvents = 'none';
+        // Enable pointer events on the text layer so DOM text can be selected
+        textLayerDiv.classList.add('highlight-active');
         ensureTextLayer();
     } else if (tool === 'delete') {
         currentTool = 'delete';             // Track the active tool globally
@@ -197,15 +228,35 @@ const mergeRectangles = (rects) => {
 };
 
 const handlePathCreated = (e) => {
-    if (currentTool !== 'eraser') return;
     const path = e.path;
-    path.set({
-        globalCompositeOperation: 'destination-out',
-        selectable: false,
-        evented: false,
-        stroke: 'black',
-        fill: null
-    });
+    // Ensure drawing paths have safe join/cap settings and correct composite mode
+    if (currentTool === 'eraser') {
+        path.set({
+            globalCompositeOperation: 'destination-out',
+            selectable: false,
+            evented: false,
+            stroke: 'black',
+            fill: null,
+            strokeLineJoin: 'round',
+            strokeLineCap: 'round',
+        });
+    } else if (currentTool === 'draw') {
+        // Normal drawing path: make sure it draws over content and uses rounded corners
+        path.set({
+            globalCompositeOperation: 'source-over',
+            selectable: true,
+            evented: true,
+            fill: null,
+            strokeLineJoin: 'round',
+            strokeLineCap: 'round',
+        });
+    } else {
+        // For other tools, ensure safe defaults
+        path.set({
+            globalCompositeOperation: 'source-over',
+            fill: null,
+        });
+    }
     fabricCanvas.bringToFront(path);
     fabricCanvas.renderAll();
 };
@@ -221,12 +272,19 @@ const handleCanvasMouseDown = (e) => {
     }
 
     const { fontFamily, fontSize, fill } = getTextProps();
-    const text = new fabric.IText('Type here', {
+    // Create a wrapping Textbox constrained to the page right edge so text
+    // automatically wraps when it reaches the PDF page border.
+    const pageWidth = fabricCanvas.getWidth();
+    const paddingRight = 8; // gap from page edge
+    const maxWidth = Math.max(40, pageWidth - pointer.x - paddingRight);
+    const text = new fabric.Textbox('Type here', {
         left: pointer.x,
         top: pointer.y,
         fontSize,
         fill,
         fontFamily,
+        width: maxWidth,
+        splitByGrapheme: true,
     });
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
@@ -235,46 +293,6 @@ const handleCanvasMouseDown = (e) => {
     
 };
 
-const handleFontFamilyChange = () => {
-    const obj = fabricCanvas.getActiveObject();
-    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
-        obj.set('fontFamily', document.getElementById('font-family').value);
-        fabricCanvas.renderAll();
-    }
-};
-
-const handleFontSizeChange = () => {
-    const obj = fabricCanvas.getActiveObject();
-    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
-        obj.set('fontSize', parseInt(document.getElementById('font-size').value) || 20);
-        fabricCanvas.renderAll();
-    }
-};
-
-const applyStyleToControls = (style) => {
-    const fontSelect = document.getElementById('font-family');
-    const sizeInput = document.getElementById('font-size');
-    const colorPicker = document.getElementById('color-picker');
-    if (style.fontName) {
-        const exists = [...fontSelect.options].some(o => o.value === style.fontName);
-        if (exists) fontSelect.value = style.fontName;
-    }
-    if (style.fontSize) sizeInput.value = style.fontSize;
-    if (style.color) colorPicker.value = style.color;
-};
-
-const syncFontControls = (e) => {
-    const obj = e.selected?.[0];
-    if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
-        document.getElementById('font-family').value = obj.fontFamily || 'Arial';
-        document.getElementById('font-size').value = obj.fontSize || 20;
-        document.getElementById('color-picker').value = obj.fill || '#000000';
-        document.getElementById('text-controls').classList.add('visible');
-        // Visually activate Text button to show font/size info
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tool-text').classList.add('active');
-    }
-};
 
 const clearTextControls = () => {
     if (currentTool !== 'text') {
@@ -366,12 +384,23 @@ const handleTextLayerHighlight = () => {
 //without initializing the tools, the tool bar will not work and the user will not be able to select any of the tools
 const initTools = () => {
     updateToolButtons();
+    const mouseBtnEl = document.querySelector('#tool-mouse');
+    if (mouseBtnEl) mouseBtnEl.addEventListener('click', () => {
+        setTool('mouse');
+        // Ensure the canvas cursor resets to default
+        if (fabricCanvas) fabricCanvas.defaultCursor = 'default';
+    });
     document.querySelector('#tool-select').addEventListener('click', () => setTool('select'));
     document.querySelector('#tool-text').addEventListener('click', () => setTool('text'));
     document.querySelector('#tool-draw').addEventListener('click', () => setTool('draw'));
     document.querySelector('#tool-eraser').addEventListener('click', () => setTool('eraser'));
     document.querySelector('#tool-highlight').addEventListener('click', () => setTool('highlight'));
     document.querySelector('#tool-delete').addEventListener('click', () => setTool('delete'));
+    document.querySelector('#tool-bold').addEventListener('click', () => toggleTextStyle('fontWeight', 'bold', 'normal'));
+    document.querySelector('#tool-italic').addEventListener('click', () => toggleTextStyle('fontStyle', 'italic', 'normal'));
+    document.querySelector('#tool-underline').addEventListener('click', toggleUnderline);
+    document.querySelector('#tool-bullet').addEventListener('click', () => toggleList('bullet'));
+    document.querySelector('#tool-numbered').addEventListener('click', () => toggleList('numbered'));
     document.querySelector('#tool-search').addEventListener('click', openSearchBar);
     document.querySelector('#color-picker').addEventListener('input', handleColorChange);
     document.querySelectorAll('.color-swatch').forEach(btn => {
@@ -408,6 +437,28 @@ const initTools = () => {
     fabricCanvas.on('selection:created', syncFontControls);
     fabricCanvas.on('selection:updated', syncFontControls);
     fabricCanvas.on('selection:cleared', clearTextControls);
+    // Keep textbox width constrained to page bounds when moving or after modification
+    fabricCanvas.on('object:moving', (e) => {
+        const obj = e.target;
+        if (!obj || obj.type !== 'textbox') return;
+        const pageW = fabricCanvas.getWidth();
+        const paddingRight = 8;
+        if (obj.left + obj.width > pageW - paddingRight) {
+            obj.left = Math.max(0, pageW - paddingRight - obj.width);
+            fabricCanvas.requestRenderAll();
+        }
+    });
+    fabricCanvas.on('object:modified', (e) => {
+        const obj = e.target;
+        if (!obj || obj.type !== 'textbox') return;
+        const pageW = fabricCanvas.getWidth();
+        const paddingRight = 8;
+        const maxW = Math.max(40, pageW - obj.left - paddingRight);
+        if (obj.width > maxW) {
+            obj.set('width', maxW);
+            fabricCanvas.requestRenderAll();
+        }
+    });
     fabricCanvas.on('text:editing:entered', (e) => {
         const obj = e.target;
         document.getElementById('font-family').value = obj.fontFamily || 'Arial';
@@ -429,8 +480,73 @@ const initTools = () => {
     document.getElementById('font-size').addEventListener('input', handleFontSizeChange);
 
     document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
         const active = fabricCanvas.getActiveObject();
+        if (e.key === 'Enter' && active && isTextObject(active) && active.isEditing) {
+            const text = active.text || '';
+            const cursor = typeof active.selectionStart === 'number' ? active.selectionStart : text.length;
+            const before = text.slice(0, cursor);
+            const after = text.slice(cursor);
+            const lineStart = before.lastIndexOf('\n') + 1;
+            const currentLine = before.slice(lineStart);
+            const bulletMatch = currentLine.match(/^(•\s)/);
+            const numberedMatch = currentLine.match(/^(\s*)(\d+)\.\s/);
+            if (bulletMatch || numberedMatch) {
+                e.preventDefault();
+                let insert = '\n';
+                if (bulletMatch) {
+                    insert += bulletMatch[1];
+                } else if (numberedMatch) {
+                    const prefix = numberedMatch[1] || '';
+                    const nextNumber = parseInt(numberedMatch[2], 10) + 1;
+                    insert += `${prefix}${nextNumber}. `;
+                }
+                active.text = before + insert + after;
+                const newCursor = cursor + insert.length;
+                active.selectionStart = active.selectionEnd = newCursor;
+                active.fire('changed');
+                fabricCanvas.requestRenderAll();
+                return;
+            }
+        }
+        if (e.key === 'Backspace' && active && isTextObject(active) && active.isEditing) {
+            const text = active.text || '';
+            const start = typeof active.selectionStart === 'number' ? active.selectionStart : 0;
+            const end = typeof active.selectionEnd === 'number' ? active.selectionEnd : start;
+            if (start === end && start > 0) {
+                const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+                const nextNewline = text.indexOf('\n', start);
+                const lineEnd = nextNewline === -1 ? text.length : nextNewline;
+                const lineText = text.slice(lineStart, lineEnd);
+                const bulletPrefixMatch = lineText.match(/^(•\s)/);
+                const numberedPrefixMatch = lineText.match(/^(\s*\d+\.\s)/);
+                const prefix = bulletPrefixMatch ? bulletPrefixMatch[1] : numberedPrefixMatch ? numberedPrefixMatch[1] : null;
+                const prefixEnd = prefix ? lineStart + prefix.length : -1;
+                if (prefix && start > lineStart && start <= prefixEnd) {
+                    e.preventDefault();
+                    const strippedLine = lineText.slice(prefix.length);
+                    const updatedText = text.slice(0, lineStart) + strippedLine + text.slice(lineEnd);
+                    active.set('text', updatedText);
+
+                    if (strippedLine === '' && lineStart > 0) {
+                        const prevLineEnd = lineStart - 1; // index of the newline before the current line
+                        const prevLineStart = updatedText.lastIndexOf('\n', prevLineEnd - 1) + 1;
+                        const prevLineText = updatedText.slice(prevLineStart, prevLineEnd);
+                        const prevPrefixMatch = prevLineText.match(/^(\s*(?:•\s|\d+\.\s))/);
+                        active.selectionStart = active.selectionEnd = prevPrefixMatch
+                            ? prevLineStart + prevPrefixMatch[1].length
+                            : prevLineEnd;
+                    } else {
+                        active.selectionStart = active.selectionEnd = lineStart;
+                    }
+
+                    active.fire('changed');
+                    active.setCoords && active.setCoords();
+                    fabricCanvas.requestRenderAll();
+                    return;
+                }
+            }
+        }
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
         if (!active) return;
         // Don't intercept while editing text
         if (active.isEditing) return;
@@ -439,6 +555,30 @@ const initTools = () => {
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         e.preventDefault();
         deleteSelection();
+    });
+
+    // Support paste into a fabric.Textbox while it's being edited.
+    // Some browsers don't forward clipboard input to Fabric's hidden textarea reliably,
+    // so we intercept the paste and manually insert text at the current selection.
+    document.addEventListener('paste', (e) => {
+        try {
+            const active = fabricCanvas.getActiveObject();
+            if (!active || active.type !== 'textbox' || !active.isEditing) return;
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
+            const text = active.text || '';
+            const start = typeof active.selectionStart === 'number' ? active.selectionStart : text.length;
+            const end = typeof active.selectionEnd === 'number' ? active.selectionEnd : start;
+            const before = text.slice(0, start);
+            const after = text.slice(end);
+            active.text = before + paste + after;
+            const cursor = start + paste.length;
+            active.selectionStart = active.selectionEnd = cursor;
+            active.fire('changed');
+            fabricCanvas.requestRenderAll();
+        } catch (_) {
+            // Fall back to default behavior if anything goes wrong
+        }
     });
 };
 
