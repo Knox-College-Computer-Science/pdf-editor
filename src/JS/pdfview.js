@@ -46,6 +46,50 @@ let pdfDoc = null,
 const scale = 1.5;
 let canvas, ctx, fileInput, errorDiv;
 
+// --- Draft Save Management ---
+const saveDraftToStorage = async () => {
+    if (!originalPdfBytes) return false;
+    try {
+        pageAnnotations[pageNum] = fabricCanvas.toJSON(['data']);
+        const draft = {
+            timestamp: Date.now(),
+            pdfBytes: Array.from(originalPdfBytes),
+            annotations: pageAnnotations,
+            pageNum: pageNum
+        };
+        localStorage.setItem('pdf-editor-draft', JSON.stringify(draft));
+        return true;
+    } catch (err) {
+        console.error('Failed to save draft:', err);
+        return false;
+    }
+};
+
+const loadDraftFromStorage = async () => {
+    try {
+        const stored = localStorage.getItem('pdf-editor-draft');
+        if (!stored) return null;
+        const draft = JSON.parse(stored);
+        return {
+            pdfBytes: new Uint8Array(draft.pdfBytes),
+            annotations: draft.annotations,
+            pageNum: draft.pageNum,
+            timestamp: draft.timestamp
+        };
+    } catch (err) {
+        console.error('Failed to load draft:', err);
+        return null;
+    }
+};
+
+const clearDraft = () => {
+    try {
+        localStorage.removeItem('pdf-editor-draft');
+    } catch (err) {
+        console.error('Failed to clear draft:', err);
+    }
+};
+
 const savePdfBlob = async (blob, defaultName) => {
     if (window.showSaveFilePicker) {
         try {
