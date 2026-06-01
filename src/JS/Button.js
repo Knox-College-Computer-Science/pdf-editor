@@ -134,7 +134,16 @@ const initEditorElements = () => {
         }
         return new Blob([await pdfLibDoc.save()], { type: 'application/pdf' });
     };
-
+    
+    document.getElementById('save-btn').addEventListener('click', async () => {
+        if (!originalPdfBytes) return;
+        const success = await saveDraftToStorage();
+        if (success) {
+            alert('Draft saved to browser storage');
+        } else {
+            alert('Failed to save draft');
+        }
+    });
     document.getElementById('download-btn').addEventListener('click', async () => {
         if (!originalPdfBytes) return;
         await savePdfBlob(await buildAnnotatedPdf(), 'edited.pdf');
