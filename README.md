@@ -3,6 +3,9 @@
 A browser-based PDF editor. All editing happens locally — nothing is uploaded anywhere.
 
 ---
+## 📄 Documentation
+
+Full project report and SE process notes are available in [`docs/`](./docs/).
 
 ## Setup & Installation
 
