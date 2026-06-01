@@ -23,10 +23,10 @@ public class website {
 
         // server.createContext("/pdf.js", new PDFLibHandler());
         // If your pdfview.js is looking for "sample.pdf"
-        server.createContext("/pdf.pdf", new PDFFileHandler());
+        //server.createContext("/pdf.pdf", new PDFFileHandler());
         
         // NEW: Handle CSS files
-        server.createContext("/css/style.css", new website.CSSHandler());
+        //server.createContext("/css/style.css", new website.CSSHandler());
 
         // server.createContext("/fabric.js", new website.FabricHandler());
 
@@ -70,6 +70,30 @@ public class website {
                 sendStaticFile(exchange, Paths.get("src/JS/Sidebar.js"), "application/javascript");
                 return;
             }
+            if ("/JS/Button.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Button.js"), "application/javascript");
+                return;
+            }
+            if ("/JS/rendering.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/rendering.js"), "application/javascript");
+                return;
+            }
+            if ("/JS/Search.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Search.js"), "application/javascript");
+                return;
+            }
+            if ("/JS/Signature.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Signature.js"), "application/javascript");
+                return;
+            }
+            if ("/JS/Checkmark.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Checkmark.js"), "application/javascript");
+                return;
+            }
+            if ("/JS/Text.js".equals(path)) {
+                sendStaticFile(exchange, Paths.get("src/JS/Text.js"), "application/javascript");
+                return;
+            }
 
             sendStaticFile(exchange, Paths.get("src/index.html"), "text/html");
         }
@@ -99,8 +123,21 @@ public class website {
             } else if ("/Undo.js".equals(requestPath) || "/JS/Undo.js".equals(requestPath)) {
                 jsFile = Paths.get("src/JS/Undo.js");
             } else if ("/Sidebar.js".equals(requestPath) || "/JS/Sidebar.js".equals(requestPath)) {
-                jsFile = Paths.get("src/JS/Sidebar.js");
-            } else {
+                jsFile = Paths.get("src/JS/Sidebar.js");   
+            } else if ("/Button.js".equals(requestPath) || "/JS/Button.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Button.js");
+            } else if ("/rendering.js".equals(requestPath) || "/JS/rendering.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/rendering.js");
+            } else if ("/Search.js".equals(requestPath) || "/JS/Search.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Search.js");
+            } else if ("/Signature.js".equals(requestPath) || "/JS/Signature.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Signature.js");
+            } else if ("/Checkmark.js".equals(requestPath) || "/JS/Checkmark.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Checkmark.js");
+            } else if ("/Text.js".equals(requestPath) || "/JS/Text.js".equals(requestPath)) {
+                jsFile = Paths.get("src/JS/Text.js");
+            }
+            else {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
@@ -116,37 +153,7 @@ public class website {
             os.close();
         }
     }
-    // static class PDFLibHandler implements HttpHandler {
-    //     public void handle(HttpExchange exchange) throws IOException {
-    //         byte[] response = Files.readAllBytes(Paths.get("src/pdf.js-master/src/pdf.js"));
-    //         exchange.getResponseHeaders().set("Content-Type", "application/javascript");
-    //         exchange.sendResponseHeaders(200, response.length);
-    //         exchange.getResponseBody().write(response);
-    //         exchange.getResponseBody().close();
-    //     }
-    // }
-    // static class FabricHandler implements HttpHandler {
-    //     @Override
-    //     public void handle(HttpExchange exchange) throws IOException {
-    //         byte[] response = Files.readAllBytes(Paths.get("src/fabric.js-master/dist-extensions/fabric-extensions.min.js"));
-    //         exchange.getResponseHeaders().set("Content-Type", "application/javascript");
-    //         exchange.sendResponseHeaders(200, response.length);
-    //         OutputStream os = exchange.getResponseBody();
-    //         os.write(response);
-    //         os.close();
-    //     }
-    // }
-    static class PDFFileHandler implements HttpHandler {
-        public void handle(HttpExchange exchange) throws IOException {
-            // Change "src/sample.pdf" to whatever your file is actually named!
-            byte[] response = Files.readAllBytes(Paths.get("src/pdf.pdf"));
-
-            exchange.getResponseHeaders().set("Content-Type", "application/pdf");
-            exchange.sendResponseHeaders(200, response.length);
-            exchange.getResponseBody().write(response);
-            exchange.getResponseBody().close();
-        }
-    }
+   
     static class UploadHandler implements HttpHandler {
         private static final Path UPLOAD_DIR = Paths.get("src/uploads");
 
@@ -187,18 +194,6 @@ public class website {
             exchange.sendResponseHeaders(200, response.length());
             exchange.getResponseBody().write(response.getBytes());
             exchange.getResponseBody().close();
-        }
-    }
-
-    static class CSSHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            byte[] response = Files.readAllBytes(Paths.get("src/css/style.css"));
-            exchange.getResponseHeaders().set("Content-Type", "text/css");
-            exchange.sendResponseHeaders(200, response.length);
-            OutputStream os = exchange.getResponseBody();
-            os.write(response);
-            os.close();
         }
     }
 
